@@ -1,12 +1,12 @@
-#Επειδή στην προηγούμενη εργασία είχα το δικό μου μονοπάτι, αποφάσισα να το βελτιώσω.
-#Προστίθενται πλέον τα src, lib και τα εργαλεία εντός του αποθετηρίου.
-#Σβήνουμε ολόκληρους τους φακέλους αναδρομικά για να μην μπερδεύεται το μάτι.
+#Το Makefile αποτελεί τροποποίηση του ήδη δοσμένου.
+#-te για throw exception που ζητήθηκε για να αναφέρει τα τυχόν σφάλματα.
+#Η αναδρομική διαγραφή των φακέλων και των αρχείων έγινε προκειμένου να βοηθήσει στο τι δημιουργήθηκε τελικά. 
 
 all: compile
 
 compile:
-	java -jar lib/javacc5.jar src/MiniJava.jj
-	java -jar lib/jtb132di.jar src/MiniJava.jj
+	java -jar lib/jtb132di.jar -te src/MiniJava.jj
+	java -jar lib/javacc5.jar -src/MiniJava-jtb.jj
 	# javac Main.java
 
 clean:
