@@ -6,11 +6,11 @@ all: compile
 
 compile:
 	java -jar lib/jtb132di.jar -te src/MiniJava.jj
-	java -jar lib/javacc5.jar -src/MiniJava-jtb.jj
-	# javac Main.java
+	java -jar lib/javacc5.jar src/MiniJava-jtb.jj
+	javac Main.java
 
 clean:
-	rm -rf *.class *.java *~
+	find . -name "*.class" -type f -delete
 	rm -rf syntaxtree visitor
 	rm -f src/MiniJava-jtb.jj
 
