@@ -211,13 +211,10 @@ class MyVisitor extends GJDepthFirst<String, Void>{
      */
     @Override
     public String visit(FormalParameterList n, Void argu) throws Exception {
-        String ret = n.f0.accept(this, null);
+        n.f0.accept(this, argu); 
+        n.f1.accept(this, argu);
 
-        if (n.f1 != null) {
-            ret += n.f1.accept(this, null);
-        }
-
-        return ret;
+        return null;
     }
 
     /**
@@ -234,12 +231,10 @@ class MyVisitor extends GJDepthFirst<String, Void>{
      */
     @Override
     public String visit(FormalParameterTail n, Void argu) throws Exception {
-        String ret = "";
         for ( Node node: n.f0.nodes) {
-            ret += ", " + node.accept(this, null);
+            node.accept(this, argu);
         }
-
-        return ret;
+        return null;
     }
 
     /**
@@ -248,10 +243,16 @@ class MyVisitor extends GJDepthFirst<String, Void>{
      */
     @Override
     public String visit(FormalParameter n, Void argu) throws Exception{
-        String type = n.f0.accept(this, null);
-        String name = n.f1.accept(this, null);
+        String type = n.f0.accept(this, argu);
+        String name = n.f1.accept(this, argu);
 
-        currentMethod.parameters.put(name, type);
+        if (currentMethod != null) {
+            if (currentMethod.parameters.containsKey(name)) {
+                throw new Exception("Duplicate parameter: " + name);
+            }
+            currentMethod.parameters.put(name, type);
+        }
+    
         return type + " " + name;
     }
 

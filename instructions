@@ -6,7 +6,7 @@
 Θα πρέπει να υπάρχει όλος ο φάκελος της εργασίας όπως δόθηκε προκειμένου να τρέξει σωστά το πρόγραμμα.
 
 Έγινε χρήση των δοσμένων:
-    αυτούσια:         Main.java, Example.java
-    τροποποιημένα:    Makefile, MyVisitor.java
+    αυτούσια:         Main.java
+    τροποποιημένα:    Makefile, MyVisitor.java, Example.java
 
 Για την εκτέλεση:   java Main Example.java
