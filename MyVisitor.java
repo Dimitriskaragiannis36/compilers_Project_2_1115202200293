@@ -27,6 +27,23 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     }
 
     /**
+    * f0 -> MainClass()
+    * f1 -> ( TypeDeclaration() )*
+    * f2 -> <EOF>
+    */
+    @Override
+    public String visit(Goal n, Void argu) throws Exception {
+        n.f0.accept(this, argu); 
+        n.f1.accept(this, argu); 
+        n.f2.accept(this, argu); 
+
+        /*για να βλέπω τι περιέχει ο symbol table*/
+        printSymbolTable(); 
+
+        return null;
+    }
+
+    /**
      * f0 -> "class"
      * f1 -> Identifier()
      * f2 -> "{"
@@ -52,8 +69,6 @@ class MyVisitor extends GJDepthFirst<String, Void>{
         System.out.println("Class: " + classname);
 
         super.visit(n, argu);
-
-        System.out.println();
 
         return null;
     }
@@ -106,7 +121,7 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     public String visit(ClassExtendsDeclaration n, Void argu) throws Exception {
         n.f0.accept(this, argu);
 
-        String classname = n.f1.accept(this, null);
+        String classname = n.f1.accept(this, argu);
         //ελέγχω για duplicate
         if (symbolTable.containsKey(classname)) {
             throw new Exception("Class " + classname + " already defined.");
@@ -122,13 +137,11 @@ class MyVisitor extends GJDepthFirst<String, Void>{
         currentClass = classSymbol;
 
         n.f4.accept(this, argu);
-        System.out.println("Fields: οκ");
         n.f5.accept(this, argu);
-        System.out.println("Methods: ");
         n.f6.accept(this, argu);
         n.f7.accept(this, argu);
 
-        System.out.println();
+        currentClass = null;
 
         return null;
     }
@@ -141,9 +154,15 @@ class MyVisitor extends GJDepthFirst<String, Void>{
    public String visit(VarDeclaration n, Void argu) throws Exception {
         String _ret=null;
         String type = n.f0.accept(this, argu);
-        String var = n.f1.accept(this, argu);
-        System.out.println(var + " " + type);
-        super.visit(n, argu);
+        String varName = n.f1.accept(this, argu);
+        
+        if (currentMethod != null) {
+            currentMethod.locals.put(varName, type);
+        } else if (currentClass != null) {
+            currentClass.fields.put(varName, type);
+        }
+
+        //super.visit(n, argu);
         
         return _ret;
     }
@@ -165,15 +184,24 @@ class MyVisitor extends GJDepthFirst<String, Void>{
      */
     @Override
     public String visit(MethodDeclaration n, Void argu) throws Exception {
-        String argumentList = n.f4.present() ? n.f4.accept(this, null) : "";
+        String returnType = n.f1.accept(this, null);
+        String methodName = n.f2.accept(this, null);
 
-        String myType = n.f1.accept(this, null);
-        String myName = n.f2.accept(this, null);
+        MethodSymbol methodSymbol = new MethodSymbol();
+        methodSymbol.name = methodName;
+        methodSymbol.returnType = returnType;
+        currentMethod = methodSymbol;
 
-        System.out.println("Method: " + myType + " " + myName + " (" + argumentList + ")");
-        System.out.println("Local vars:");
+        if (n.f4.present()) {
+            n.f4.accept(this, argu);
+        }
 
-        super.visit(n, argu);
+        n.f7.accept(this, argu);
+
+        currentClass.methods.put(methodName, methodSymbol);
+        currentMethod = null;
+
+        //super.visit(n, argu);
         return null;
     }
 
@@ -222,6 +250,8 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     public String visit(FormalParameter n, Void argu) throws Exception{
         String type = n.f0.accept(this, null);
         String name = n.f1.accept(this, null);
+
+        currentMethod.parameters.put(name, type);
         return type + " " + name;
     }
 
@@ -242,5 +272,46 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     public String visit(Identifier n, Void argu) {
         return n.f0.toString();
     }
+
+    /*ξεχωριστή συνάρτηση για το πρώτο πέρασμα με εκτύπωση του symbol table*/
+    public void printSymbolTable() {
+        for (String className : symbolTable.keySet()) {
+            ClassSymbol cls = symbolTable.get(className);
+            System.out.println("Class: " + cls.name + (cls.parent != null ? " extends " + cls.parent : ""));
+    
+            if (!cls.fields.isEmpty()) {
+                System.out.println("  Fields:");
+                for (String fieldName : cls.fields.keySet()) {
+                    System.out.println("    " + fieldName + " : " + cls.fields.get(fieldName));
+                }
+            }
+    
+            if (!cls.methods.isEmpty()) {
+                System.out.println("  Methods:");
+                for (String methodName : cls.methods.keySet()) {
+                    MethodSymbol method = cls.methods.get(methodName);
+                    System.out.print("    " + method.name + "(");
+    
+                    boolean first = true;
+                    for (String param : method.parameters.keySet()) {
+                        if (!first) System.out.print(", ");
+                        System.out.print(method.parameters.get(param) + " " + param);
+                        first = false;
+                    }
+                    System.out.println(") : " + method.returnType);
+    
+                    if (!method.locals.isEmpty()) {
+                        System.out.println("      Locals:");
+                        for (String localName : method.locals.keySet()) {
+                            System.out.println("        " + localName + " : " + method.locals.get(localName));
+                        }
+                    }
+                }
+            }
+    
+            System.out.println();
+        }
+    }  
+
 }
 
