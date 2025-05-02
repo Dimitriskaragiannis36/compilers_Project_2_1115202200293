@@ -232,28 +232,7 @@ class MyVisitor extends GJDepthFirst<String, Void>{
         return null;
     }
 
-    /**
-     * f0 -> FormalParameter()
-     * f1 -> FormalParameterTail()
-     */
-    @Override
-    public String visit(FormalParameterTerm n, Void argu) throws Exception {
-        return n.f1.accept(this, argu);
-    }
-
-    /**
-     * f0 -> ","
-     * f1 -> FormalParameter()
-     */
-    @Override
-    public String visit(FormalParameterTail n, Void argu) throws Exception {
-        for ( Node node: n.f0.nodes) {
-            node.accept(this, argu);
-        }
-        return null;
-    }
-
-    /**
+     /**
      * f0 -> Type()
      * f1 -> Identifier()
      */
@@ -270,6 +249,27 @@ class MyVisitor extends GJDepthFirst<String, Void>{
         }
     
         return type + " " + name;
+    }
+
+    /**
+     * f0 -> ","
+     * f1 -> FormalParameter()
+     */
+    @Override
+    public String visit(FormalParameterTail n, Void argu) throws Exception {
+        for ( Node node: n.f0.nodes) {
+            node.accept(this, argu);
+        }
+        return null;
+    }
+
+    /**
+     * f0 -> FormalParameter()
+     * f1 -> FormalParameterTail()
+     */
+    @Override
+    public String visit(FormalParameterTerm n, Void argu) throws Exception {
+        return n.f1.accept(this, argu);
     }
 
     /**
@@ -326,14 +326,6 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     @Override
     public String visit(IntegerType n, Void argu) throws Exception {
         return "int";
-    }
-
-    /**
-    * f0 -> <IDENTIFIER>
-    */
-    @Override
-    public String visit(Identifier n, Void argu) {
-        return n.f0.toString();
     }
 
     /**
@@ -574,6 +566,68 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     }
 
     /**
+    * f0 -> <IDENTIFIER>
+    */
+    @Override
+    public String visit(Identifier n, Void argu) throws Exception {
+        return n.f0.toString();
+    }
+
+    /**
+    * f0 -> "this"
+    */
+    @Override
+    public String visit(ThisExpression n, Void argu) throws Exception {
+        return "this";
+    }
+
+    /**
+     * f0 -> BooleanArrayAllocationExpression()
+    *       | IntegerArrayAllocationExpression()
+    */
+    @Override
+    public String visit(ArrayAllocationExpression n, Void argu) throws Exception {
+        return n.f0.accept(this, argu);
+    }
+
+    /**
+     * f0 -> "new"
+    * f1 -> "boolean"
+    * f2 -> "["
+    * f3 -> Expression()
+    * f4 -> "]"
+    */
+    @Override
+    public String  visit(BooleanArrayAllocationExpression n, Void argu) throws Exception {
+        n.f3.accept(this, argu);
+        return "boolean[]";
+    }
+
+    /**
+     * f0 -> "new"
+    * f1 -> "int"
+    * f2 -> "["
+    * f3 -> Expression()
+    * f4 -> "]"
+    */
+    @Override
+    public String visit(IntegerArrayAllocationExpression n, Void argu) throws Exception {
+        n.f3.accept(this, argu); 
+        return "int[]";
+    }
+
+    /**
+     * f0 -> "new"
+    * f1 -> Identifier()
+    * f2 -> "("
+    * f3 -> ")"
+    */
+    @Override
+    public String visit(AllocationExpression n, Void argu) throws Exception {
+        return n.f1.accept(this, argu);
+    }
+
+    /**
     * f0 -> "!"
     * f1 -> Clause()
     */
@@ -581,6 +635,16 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     public String visit(NotExpression n, Void argu) throws Exception {
         n.f1.accept(this, argu);
         return null;
+    }
+
+    /**
+     * f0 -> "("
+    * f1 -> Expression()
+    * f2 -> ")"
+    */
+    @Override
+    public String visit(BracketExpression n, Void argu) throws Exception {
+        return n.f1.accept(this, argu);
     }
 
     /*ξεχωριστή συνάρτηση για το πρώτο πέρασμα με εκτύπωση του symbol table*/

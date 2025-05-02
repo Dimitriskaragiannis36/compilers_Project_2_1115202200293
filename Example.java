@@ -21,6 +21,9 @@ class Example {
         c = true;
         arr = new int[10];
 
+        objA = new A();
+        objB = new B();
+
         result = a && b;            
         result = !a && c;         
         result = !(a && b);         
@@ -59,7 +62,16 @@ class A {
 
     public int foo(int i, int j) {
         int k;
+        boolean comp;
+        int[] localIntArray;
+        boolean[] localBoolArray;
+        A newObj;
+
         k = i+j;
+        comp = (i < j);
+        localIntArray = new int[10];
+        localBoolArray = new boolean[5];
+        newObj = new A();
 
         return k; 
     }
