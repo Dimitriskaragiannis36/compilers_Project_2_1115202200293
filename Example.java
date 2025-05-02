@@ -1,20 +1,35 @@
 class Example {
     public static void main(String[] args) {
         int x;
+        int y;
+        int z;
         boolean a;
         boolean b;
         boolean c;
         boolean result;
+        int[] arr;
         
-        x=5;
+        x = 5;
+        y = 3;
+        z = 0;
         a = true;
         b = false;
         c = true;
+        arr = new int[10];
 
         result = a && b;            
         result = !a && c;         
         result = !(a && b);         
         result = !(!c);
+        result = x < y;
+
+        z = x + y;        
+        z = x - y;         
+        z = x * y;         
+        
+
+        z = arr[2];        
+        System.out.println(arr.length);
 
         System.out.println(x);
         System.out.println(c);

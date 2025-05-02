@@ -405,6 +405,78 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     }
 
     /**
+    * f0 -> PrimaryExpression()
+    * f1 -> "<"
+    * f2 -> PrimaryExpression()
+    */
+    @Override
+    public String visit(CompareExpression n, Void argu) throws Exception {
+        n.f0.accept(this, argu);
+        n.f2.accept(this, argu);
+        return "boolean";
+    }
+
+    /**
+     * f0 -> PrimaryExpression()
+    * f1 -> "+"
+    * f2 -> PrimaryExpression()
+    */
+    @Override
+    public String visit(PlusExpression n, Void argu) throws Exception {
+        n.f0.accept(this, argu);
+        n.f2.accept(this, argu);
+        return "int";
+    }
+
+    /**
+     * f0 -> PrimaryExpression()
+    * f1 -> "-"
+    * f2 -> PrimaryExpression()
+    */
+    @Override
+    public String visit(MinusExpression n, Void argu) throws Exception {
+        n.f0.accept(this, argu);
+        n.f2.accept(this, argu);
+        return "int";
+    }
+
+    /**
+     * f0 -> PrimaryExpression()
+    * f1 -> "*"
+    * f2 -> PrimaryExpression()
+    */
+    @Override
+    public String visit(TimesExpression n, Void argu) throws Exception {
+        n.f0.accept(this, argu);
+        n.f2.accept(this, argu);
+        return "int";
+    }
+
+    /**
+     * f0 -> PrimaryExpression()
+    * f1 -> "["
+    * f2 -> PrimaryExpression()
+    * f3 -> "]"
+    */
+    @Override
+    public String visit(ArrayLookup n, Void argu) throws Exception {
+        n.f0.accept(this, argu); 
+        n.f2.accept(this, argu); 
+        return "int";
+    }
+
+    /**
+     * f0 -> PrimaryExpression()
+    * f1 -> "."
+    * f2 -> "length"
+    */
+    @Override
+    public String visit(ArrayLength n, Void argu) throws Exception {
+        n.f0.accept(this, argu);
+        return "int";
+    }
+
+    /**
     * f0 -> NotExpression()
     *       | PrimaryExpression()
     */
