@@ -1,5 +1,6 @@
 class Example {
     public static void main(String[] args) {
+        int Dim_Kar293$;
         int x;
         int y;
         int z;
@@ -51,6 +52,19 @@ class Example {
         z = objB.foobar(true);
         objA = objB.getA(objA, 42);
         boolArr = objB.mergeBoolArrays(boolArr, boolArr);
+
+        arr[0] = x + y; 
+
+        if (a) { 
+            System.out.println(x); 
+        } else {
+            arr[1] = z;
+        }
+
+        while (x < 10) { 
+            System.out.println(x);
+            x = x + 1;
+        }
     }
 }
 
@@ -73,6 +87,16 @@ class A {
         localBoolArray = new boolean[5];
         newObj = new A();
 
+        if (comp) {
+            localIntArray[0] = k; 
+        } else {
+            System.out.println(k); 
+        }
+    
+        while (k < 100) {
+            k = k + 1;
+        }
+
         return k; 
     }
     public int bar(){ return 1; }
@@ -86,6 +110,20 @@ class A {
 
     public boolean[] getBoolArray() {
         return boolArray;
+    }
+    public int complexOperation(int a, int b, boolean c, boolean[] d, int[] e, A obj) {
+        return a + b;
+    }
+
+    public int printMultiple(int x, int y, boolean flag) {
+        System.out.println(x);
+        System.out.println(y);
+        if (flag) {
+            System.out.println(1);
+        } else {
+            System.out.println(2);
+        }
+        return 0;
     }
 }
 

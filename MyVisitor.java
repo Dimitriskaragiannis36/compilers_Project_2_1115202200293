@@ -88,6 +88,15 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     }
 
     /**
+    * f0 -> ClassDeclaration()
+    *       | ClassExtendsDeclaration()
+    */
+    @Override
+    public String visit(TypeDeclaration n, Void argu) throws Exception {
+        return n.f0.accept(this, argu);
+    }
+
+    /**
      * f0 -> "class"
      * f1 -> Identifier()
      * f2 -> "{"
@@ -100,11 +109,6 @@ class MyVisitor extends GJDepthFirst<String, Void>{
         n.f0.accept(this, argu);
         
         String classname = n.f1.accept(this, argu);
-        //ελέγχω για duplicate
-        if (symbolTable.containsKey(classname)) {
-            throw new Exception("Class " + classname + " already defined.");
-        }
-
         ClassSymbol classSymbol = new ClassSymbol();
         classSymbol.name = classname;
         symbolTable.put(classname, classSymbol);
@@ -136,11 +140,6 @@ class MyVisitor extends GJDepthFirst<String, Void>{
         n.f0.accept(this, argu);
 
         String classname = n.f1.accept(this, argu);
-        //ελέγχω για duplicate
-        if (symbolTable.containsKey(classname)) {
-            throw new Exception("Class " + classname + " already defined.");
-        }
-
         n.f2.accept(this, argu);
         String parentname = n.f3.accept(this, argu);
 
@@ -212,6 +211,8 @@ class MyVisitor extends GJDepthFirst<String, Void>{
         }
 
         n.f7.accept(this, argu);
+        n.f8.accept(this, argu); 
+        n.f10.accept(this, argu); 
 
         currentClass.methods.put(methodName, methodSymbol);
         currentMethod = null;
@@ -242,9 +243,6 @@ class MyVisitor extends GJDepthFirst<String, Void>{
         String name = n.f1.accept(this, argu);
 
         if (currentMethod != null) {
-            if (currentMethod.parameters.containsKey(name)) {
-                throw new Exception("Duplicate parameter: " + name);
-            }
             currentMethod.parameters.put(name, type);
         }
     
@@ -257,7 +255,7 @@ class MyVisitor extends GJDepthFirst<String, Void>{
      */
     @Override
     public String visit(FormalParameterTail n, Void argu) throws Exception {
-        for ( Node node: n.f0.nodes) {
+        for (FormalParameterTerm term : n.f0.nodes) {
             node.accept(this, argu);
         }
         return null;
@@ -269,7 +267,8 @@ class MyVisitor extends GJDepthFirst<String, Void>{
      */
     @Override
     public String visit(FormalParameterTerm n, Void argu) throws Exception {
-        return n.f1.accept(this, argu);
+        n.f1.accept(this, argu); // process the actual parameter
+        return null;
     }
 
     /**
@@ -362,8 +361,72 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     */
     @Override
     public String visit(AssignmentStatement n, Void argu) throws Exception {
-        String varName = n.f0.accept(this, argu);  
+        n.f0.accept(this, argu);  
         n.f2.accept(this, argu);
+        return null;
+    }
+
+    /**
+    * f0 -> Identifier()
+    * f1 -> "["
+    * f2 -> Expression()
+    * f3 -> "]"
+    * f4 -> "="
+    * f5 -> Expression()
+    * f6 -> ";"
+    */
+    @Override
+    public String visit(ArrayAssignmentStatement n, Void argu) throws Exception {
+        n.f0.f0.toString(); 
+    
+        n.f2.accept(this, argu); 
+        n.f5.accept(this, argu); 
+        return null;
+    }
+
+    /**
+     * f0 -> "if"
+    * f1 -> "("
+    * f2 -> Expression()
+    * f3 -> ")"
+    * f4 -> Statement()
+    * f5 -> "else"
+    * f6 -> Statement()
+    */
+    @Override
+    public String visit(IfStatement n, Void argu) throws Exception {
+        n.f2.accept(this, argu); 
+        n.f4.accept(this, argu); 
+        n.f6.accept(this, argu);
+
+        return null;
+    }
+
+    /**
+     * f0 -> "while"
+    * f1 -> "("
+    * f2 -> Expression()
+    * f3 -> ")"
+    * f4 -> Statement()
+    */
+    @Override
+    public String visit(WhileStatement n, Void argu) throws Exception {
+        n.f2.accept(this, argu); 
+        n.f4.accept(this, argu); 
+    
+        return null;
+    }
+
+    /**
+     * f0 -> "System.out.println"
+    * f1 -> "("
+    * f2 -> Expression()
+    * f3 -> ")"
+    * f4 -> ";"
+    */
+    @Override
+    public String visit(PrintStatement n, Void argu) throws Exception {
+        n.f2.accept(this, argu); 
         return null;
     }
 
@@ -546,7 +609,7 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     */
     @Override
     public String visit(IntegerLiteral n, Void argu) throws Exception {
-        return null;
+        return n.f0.toString();
     }
 
     /**
