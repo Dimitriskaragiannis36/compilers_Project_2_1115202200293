@@ -477,6 +477,55 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     }
 
     /**
+    * f0 -> PrimaryExpression()
+    * f1 -> "."
+    * f2 -> Identifier()
+    * f3 -> "("
+    * f4 -> ( ExpressionList() )?
+    * f5 -> ")"
+    */
+    @Override
+    public String visit(MessageSend n, Void argu) throws Exception {
+        n.f0.accept(this, argu);
+        n.f2.accept(this, argu);
+        n.f4.accept(this, argu);
+        return null;
+    }
+
+    /**
+     * f0 -> Expression()
+    * f1 -> ExpressionTail()
+    */
+    @Override
+    public String visit(ExpressionList n, Void argu) throws Exception {
+        n.f0.accept(this, argu); 
+        n.f1.accept(this, argu);
+
+        return null;
+    }
+
+    /**
+     * f0 -> ( ExpressionTerm() )*
+    */
+    @Override
+    public String visit(ExpressionTail n, Void argu) throws Exception {
+        n.f0.accept(this, argu);
+
+        return null;
+    }
+
+    /**
+     * f0 -> ","
+    * f1 -> Expression()
+    */
+    @Override
+    public String visit(ExpressionTerm n, Void argu) throws Exception {
+        n.f1.accept(this, argu);
+
+        return null;
+    }
+
+    /**
     * f0 -> NotExpression()
     *       | PrimaryExpression()
     */

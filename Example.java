@@ -8,6 +8,10 @@ class Example {
         boolean c;
         boolean result;
         int[] arr;
+        A objA;
+        B objB;
+        int[] newArr;
+        boolean[] boolArr;
         
         x = 5;
         y = 3;
@@ -33,7 +37,17 @@ class Example {
 
         System.out.println(x);
         System.out.println(c);
+        System.out.println(z);
         System.out.println(result);
+
+        z = objA.foo(x, y);
+        result = objA.compare(x, y, a);
+        newArr = objA.getArray(5);
+        boolArr = objA.getBoolArray();
+
+        z = objB.foobar(true);
+        objA = objB.getA(objA, 42);
+        boolArr = objB.mergeBoolArrays(boolArr, boolArr);
     }
 }
 
