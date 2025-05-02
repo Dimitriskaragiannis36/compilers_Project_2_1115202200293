@@ -255,7 +255,7 @@ class MyVisitor extends GJDepthFirst<String, Void>{
      */
     @Override
     public String visit(FormalParameterTail n, Void argu) throws Exception {
-        for (FormalParameterTerm term : n.f0.nodes) {
+        for ( Node node: n.f0.nodes) {
             node.accept(this, argu);
         }
         return null;
