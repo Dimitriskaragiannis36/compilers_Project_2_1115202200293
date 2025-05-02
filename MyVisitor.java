@@ -165,7 +165,8 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     * f1 -> Identifier()
     * f2 -> ";"
     */
-   public String visit(VarDeclaration n, Void argu) throws Exception {
+    @Override
+    public String visit(VarDeclaration n, Void argu) throws Exception {
         String _ret=null;
         String type = n.f0.accept(this, argu);
         String varName = n.f1.accept(this, argu);
@@ -235,6 +236,7 @@ class MyVisitor extends GJDepthFirst<String, Void>{
      * f0 -> FormalParameter()
      * f1 -> FormalParameterTail()
      */
+    @Override
     public String visit(FormalParameterTerm n, Void argu) throws Exception {
         return n.f1.accept(this, argu);
     }
@@ -270,19 +272,65 @@ class MyVisitor extends GJDepthFirst<String, Void>{
         return type + " " + name;
     }
 
+    /**
+    * f0 -> ArrayType()
+    *       | BooleanType()
+    *       | IntegerType()
+    *       | Identifier()
+    */
     @Override
-    public String visit(ArrayType n, Void argu) {
+    public String visit(Type n, Void argu) throws Exception {
+        return n.f0.accept(this, argu);
+    }
+
+    /**
+    * f0 -> BooleanArrayType()
+    *       | IntegerArrayType()
+    */
+    @Override
+    public String visit(ArrayType n, Void argu) throws Exception {
+        return n.f0.accept(this, argu);
+    }
+
+       /**
+    * f0 -> "boolean"
+    * f1 -> "["
+    * f2 -> "]"
+    */
+    @Override
+    public String visit(BooleanArrayType n, Void argu) throws Exception {
+        return "boolean[]";
+    }
+
+       /**
+    * f0 -> "int"
+    * f1 -> "["
+    * f2 -> "]"
+    */
+    @Override
+    public String visit(IntegerArrayType n, Void argu) throws Exception {
         return "int[]";
     }
 
-    public String visit(BooleanType n, Void argu) {
+    /**
+    * f0 -> "boolean"
+    */
+    @Override
+    public String visit(BooleanType n, Void argu) throws Exception {
         return "boolean";
     }
 
-    public String visit(IntegerType n, Void argu) {
+    /**
+    * f0 -> "int"
+    */
+    @Override
+    public String visit(IntegerType n, Void argu) throws Exception {
         return "int";
     }
 
+    /**
+    * f0 -> <IDENTIFIER>
+    */
     @Override
     public String visit(Identifier n, Void argu) {
         return n.f0.toString();
