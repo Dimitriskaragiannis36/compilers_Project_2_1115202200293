@@ -1,7 +1,24 @@
 class Example {
     public static void main(String[] args) {
         int x;
-        x = 5;
+        boolean a;
+        boolean b;
+        boolean c;
+        boolean result;
+        
+        x=5;
+        a = true;
+        b = false;
+        c = true;
+
+        result = a && b;            
+        result = !a && c;         
+        result = !(a && b);         
+        result = !(!c);
+
+        System.out.println(x);
+        System.out.println(c);
+        System.out.println(result);
     }
 }
 

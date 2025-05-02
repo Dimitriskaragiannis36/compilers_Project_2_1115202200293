@@ -336,6 +336,132 @@ class MyVisitor extends GJDepthFirst<String, Void>{
         return n.f0.toString();
     }
 
+    /**
+    * f0 -> Block()
+    *       | AssignmentStatement()
+    *       | ArrayAssignmentStatement()
+    *       | IfStatement()
+    *       | WhileStatement()
+    *       | PrintStatement()
+    */
+    @Override
+    public String visit(Statement n, Void argu) throws Exception {
+        return n.f0.accept(this, argu);
+    }
+
+    /**
+     * f0 -> "{"
+    * f1 -> ( Statement() )*
+    * f2 -> "}"
+    */
+    @Override
+    public String visit(Block n, Void argu) throws Exception {
+        for (Node stmt : n.f1.nodes) {
+            stmt.accept(this, argu);
+        }
+        return null;
+    }
+
+    /**
+     * f0 -> Identifier()
+    * f1 -> "="
+    * f2 -> Expression()
+    * f3 -> ";"
+    */
+    @Override
+    public String visit(AssignmentStatement n, Void argu) throws Exception {
+        String varName = n.f0.accept(this, argu);  
+        n.f2.accept(this, argu);
+        return null;
+    }
+
+    /**
+    * f0 -> AndExpression()
+    *       | CompareExpression()
+    *       | PlusExpression()
+    *       | MinusExpression()
+    *       | TimesExpression()
+    *       | ArrayLookup()
+    *       | ArrayLength()
+    *       | MessageSend()
+    *       | Clause()
+    */
+    @Override
+    public String visit(Expression n, Void argu) throws Exception {
+        return n.f0.accept(this, argu);
+    }
+
+    /**
+    * f0 -> Clause()
+    * f1 -> "&&"
+    * f2 -> Clause()
+    */
+    @Override
+    public String visit(AndExpression n, Void argu) throws Exception {
+        n.f0.accept(this, argu);
+        n.f2.accept(this, argu);
+
+        return null;
+    }
+
+    /**
+    * f0 -> NotExpression()
+    *       | PrimaryExpression()
+    */
+    @Override
+    public String visit(Clause n, Void argu) throws Exception {
+        return n.f0.accept(this, argu);
+    }
+
+    /**
+    * f0 -> IntegerLiteral()
+    *       | TrueLiteral()
+    *       | FalseLiteral()
+    *       | Identifier()
+    *       | ThisExpression()
+    *       | ArrayAllocationExpression()
+    *       | AllocationExpression()
+    *       | BracketExpression()
+    */
+    @Override
+    public String visit(PrimaryExpression n, Void argu) throws Exception {
+        return n.f0.accept(this, argu);
+    }
+
+    /**
+    * f0 -> <INTEGER_LITERAL>
+    */
+    @Override
+    public String visit(IntegerLiteral n, Void argu) throws Exception {
+        return null;
+    }
+
+    /**
+    * f0 -> "true"
+    */
+    @Override
+    public String visit(TrueLiteral n, Void argu) throws Exception {
+        return null;
+    }
+
+    /**
+     * f0 -> "false"
+    */
+    @Override
+    public String visit(FalseLiteral n, Void argu) throws Exception {
+        return null;
+    }
+
+    /**
+    * f0 -> "!"
+    * f1 -> Clause()
+    */
+    @Override
+    public String visit(NotExpression n, Void argu) throws Exception {
+        n.f1.accept(this, argu);
+        return null;
+    }
+
     /*ξεχωριστή συνάρτηση για το πρώτο πέρασμα με εκτύπωση του symbol table*/
     public void printSymbolTable() {
         for (String className : symbolTable.keySet()) {
