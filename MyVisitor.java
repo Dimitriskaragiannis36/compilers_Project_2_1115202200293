@@ -65,11 +65,25 @@ class MyVisitor extends GJDepthFirst<String, Void>{
      */
     @Override
     public String visit(MainClass n, Void argu) throws Exception {
-        String classname = n.f1.accept(this, null);
-        System.out.println("Class: " + classname);
+        String className = n.f1.accept(this, null);
+        ClassSymbol classSymbol = new ClassSymbol();
+        classSymbol.name = className;
+        symbolTable.put(className, classSymbol);
+        currentClass = classSymbol;
 
-        super.visit(n, argu);
+        //για την δημιουργία της μεθόδου
+        MethodSymbol mainMethod = new MethodSymbol();
+        mainMethod.name = "main";
+        mainMethod.returnType = "void";
+        mainMethod.parameters.put(n.f11.accept(this, null), "String[]");
+        currentMethod = mainMethod;
 
+        n.f14.accept(this, argu);
+
+        currentClass.methods.put("main", mainMethod);
+
+        currentMethod = null;
+        currentClass = null;
         return null;
     }
 
