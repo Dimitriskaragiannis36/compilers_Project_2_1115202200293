@@ -75,6 +75,8 @@ class A {
     A a;
     int[] array;
     boolean[] boolArray;
+    boolean karagiannis;
+    int dimitrios;
 
     public int foo(int i, int j) {
         int k;
@@ -138,6 +140,7 @@ class A {
 class B extends A {
     int i;
     boolean flag;
+    int karag;
 
     public int foo(int i, int j) { return i+j; }
     //public int foo(int x, int y) { return x*y; }

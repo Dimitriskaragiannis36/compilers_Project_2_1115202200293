@@ -114,6 +114,109 @@ public class MyVisitor2 extends GJDepthFirst<String, Void> {
     }
 
     /**
+     * f0 -> "class"
+     * f1 -> Identifier()
+     * f2 -> "extends"
+     * f3 -> Identifier()
+     * f4 -> "{"
+     * f5 -> ( VarDeclaration() )*
+     * f6 -> ( MethodDeclaration() )*
+     * f7 -> "}"
+     */
+    @Override
+    public String visit(ClassExtendsDeclaration n, Void argu) throws Exception {
+        String classname = n.f1.accept(this, argu);
+        String parentname = n.f3.accept(this, argu);
+
+        MyVisitor.ClassSymbol classSymbol = symbolTable.get(classname);
+        if (classSymbol == null) {
+            throw new Exception("Class not found: " + classname);
+        }
+        currentClass = classSymbol;
+
+        System.out.println("-----------");
+        System.out.println("Class: " + classname);
+    
+        
+        MyVisitor.ClassSymbol parentClass = symbolTable.get(parentname);
+        if (parentClass == null) {
+            throw new Exception("Parent class not found: " + parentname);
+        }
+    
+        
+        int fieldOffset = 0;
+        int methodOffset = 0;
+    
+        
+        for (Map.Entry<String, String> entry : parentClass.fields.entrySet()) {
+            String fieldName = entry.getKey();
+            String fieldType = entry.getValue();
+            System.out.println(parentname + "." + fieldName + " : " + fieldOffset);
+            fieldOffsets.put(parentname + "." + fieldName, fieldOffset);
+            fieldOffset += getSize(fieldType);
+        }
+    
+       
+        Map<String, Integer> inheritedMethodOffsets = new LinkedHashMap<>();
+        for (String methodName : parentClass.methods.keySet()) {
+            inheritedMethodOffsets.put(methodName, methodOffset);
+            System.out.println(parentname + "." + methodName + " : " + methodOffset);
+            methodOffsets.put(parentname + "." + methodName, methodOffset);
+            methodOffset += 8;
+        }
+    
+        
+        for (Map.Entry<String, String> field : classSymbol.fields.entrySet()) {
+            String fieldName = field.getKey();
+            String fieldType = field.getValue();
+            System.out.println(classname + "." + fieldName + " : " + fieldOffset);
+            fieldOffsets.put(classname + "." + fieldName, fieldOffset);
+            fieldOffset += getSize(fieldType);
+        }
+    
+        for (String methodName : classSymbol.methods.keySet()) {
+            if (inheritedMethodOffsets.containsKey(methodName)) {
+                
+                int inheritedOffset = inheritedMethodOffsets.get(methodName);
+                System.out.println(classname + "." + methodName + " : " + inheritedOffset);
+                methodOffsets.put(classname + "." + methodName, inheritedOffset);
+            } else {
+                
+                System.out.println(classname + "." + methodName + " : " + methodOffset);
+                methodOffsets.put(classname + "." + methodName, methodOffset);
+                methodOffset += 8;
+            }
+        }
+    
+        return null;
+    }
+
+    /**
+    * f0 -> Type()
+    * f1 -> Identifier()
+    * f2 -> ";"
+    
+   
+    public String visit(VarDeclaration n, Void argu) throws Exception {
+        String _ret=null;
+        String type = n.f0.accept(this, argu);
+        String varName = n.f1.accept(this, argu);
+        
+        if (currentMethod != null) {
+            if (currentMethod.locals.containsKey(varName) || currentMethod.parameters.containsKey(varName)) {
+                throw new Exception("Duplicate local variable or parameter '" + varName + "' in method '" + currentMethod.name + "'");
+            }
+            currentMethod.locals.put(varName, type);
+        } else if (currentClass != null) {
+            if (currentClass.fields.containsKey(varName)) {
+                throw new Exception("Duplicate field '" + varName + "' in class '" + currentClass.name + "'");
+            }
+            currentClass.fields.put(varName, type);
+        }
+        return _ret;
+    } */
+
+    /**
     * f0 -> <IDENTIFIER>
     */
     @Override
