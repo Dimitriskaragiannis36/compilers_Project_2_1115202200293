@@ -5,37 +5,38 @@ import syntaxtree.*;
 
 public class Main {
     public static void main(String[] args) throws Exception {
-        if(args.length != 1){
-            System.err.println("Usage: java Main <inputFile>");
+        if (args.length == 0) {
+            System.err.println("Usage: java Main <file1> <file2> ... <fileN>");
             System.exit(1);
         }
 
-
-
-        FileInputStream fis = null;
-        try{
-            fis = new FileInputStream(args[0]);
-            MiniJavaParser parser = new MiniJavaParser(fis);
-
-            Goal root = parser.Goal();
-
-            System.err.println("Program parsed successfully.");
-
-            MyVisitor eval = new MyVisitor();
-            root.accept(eval, null);
-        }
-        catch(ParseException ex){
-            System.out.println(ex.getMessage());
-        }
-        catch(FileNotFoundException ex){
-            System.err.println(ex.getMessage());
-        }
-        finally{
+        for (String filename : args) {
+            FileInputStream fis = null;
             try{
-                if(fis != null) fis.close();
+                fis = new FileInputStream(filename);
+                MiniJavaParser parser = new MiniJavaParser(fis);
+
+                Goal root = parser.Goal();
+
+                System.err.println("Program parsed successfully.");
+
+                MyVisitor eval = new MyVisitor();
+                root.accept(eval, null);
+                System.out.println("====================================");
             }
-            catch(IOException ex){
+            catch(ParseException ex){
+                System.out.println(ex.getMessage());
+            }
+            catch(FileNotFoundException ex){
                 System.err.println(ex.getMessage());
+            }
+            finally{
+                try{
+                    if(fis != null) fis.close();
+                }
+                catch(IOException ex){
+                    System.err.println(ex.getMessage());
+                }
             }
         }
     }

@@ -2,6 +2,7 @@ class Example {
     public static void main(String[] args) {
         int Dim_Kar293$;
         int x;
+        //int x;
         int y;
         int z;
         boolean a;
@@ -70,6 +71,7 @@ class Example {
 
 class A {
     int i;
+    //int i;
     A a;
     int[] array;
     boolean[] boolArray;
@@ -99,7 +101,13 @@ class A {
 
         return k; 
     }
+
+    /*public int foo(int a, int b) {  
+        return a - b;
+    }*/
+
     public int bar(){ return 1; }
+    //public int bar(){ return 2; }
     public boolean compare(int x, int y, boolean flag) {
         return flag;
     }
@@ -132,6 +140,7 @@ class B extends A {
     boolean flag;
 
     public int foo(int i, int j) { return i+j; }
+    //public int foo(int x, int y) { return x*y; }
     public int foobar(boolean k){ return 1; }
     public A getA(A paramA, int num) {
         return paramA;
@@ -141,3 +150,7 @@ class B extends A {
         return b1;  
     }
 }
+
+/*class A {  
+    int x;
+}*/

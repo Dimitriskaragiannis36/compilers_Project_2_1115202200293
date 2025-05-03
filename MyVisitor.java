@@ -68,6 +68,11 @@ class MyVisitor extends GJDepthFirst<String, Void>{
         String className = n.f1.accept(this, null);
         ClassSymbol classSymbol = new ClassSymbol();
         classSymbol.name = className;
+
+        if (symbolTable.containsKey(className)) {
+            throw new Exception("Duplicate class declaration: " + className);
+        }
+
         symbolTable.put(className, classSymbol);
         currentClass = classSymbol;
 
@@ -109,6 +114,11 @@ class MyVisitor extends GJDepthFirst<String, Void>{
         n.f0.accept(this, argu);
         
         String classname = n.f1.accept(this, argu);
+
+        if (symbolTable.containsKey(classname)) {
+            throw new Exception("Duplicate class declaration: " + classname);
+        }
+
         ClassSymbol classSymbol = new ClassSymbol();
         classSymbol.name = classname;
         symbolTable.put(classname, classSymbol);
@@ -140,6 +150,11 @@ class MyVisitor extends GJDepthFirst<String, Void>{
         n.f0.accept(this, argu);
 
         String classname = n.f1.accept(this, argu);
+
+        if (symbolTable.containsKey(classname)) {
+            throw new Exception("Duplicate class declaration: " + classname);
+        }
+
         n.f2.accept(this, argu);
         String parentname = n.f3.accept(this, argu);
 
@@ -171,13 +186,16 @@ class MyVisitor extends GJDepthFirst<String, Void>{
         String varName = n.f1.accept(this, argu);
         
         if (currentMethod != null) {
+            if (currentMethod.locals.containsKey(varName) || currentMethod.parameters.containsKey(varName)) {
+                throw new Exception("Duplicate local variable or parameter '" + varName + "' in method '" + currentMethod.name + "'");
+            }
             currentMethod.locals.put(varName, type);
         } else if (currentClass != null) {
+            if (currentClass.fields.containsKey(varName)) {
+                throw new Exception("Duplicate field '" + varName + "' in class '" + currentClass.name + "'");
+            }
             currentClass.fields.put(varName, type);
         }
-
-        //super.visit(n, argu);
-        
         return _ret;
     }
 
@@ -201,6 +219,10 @@ class MyVisitor extends GJDepthFirst<String, Void>{
         String returnType = n.f1.accept(this, null);
         String methodName = n.f2.accept(this, null);
 
+        if (currentClass.methods.containsKey(methodName)) {
+            throw new Exception("Duplicate method '" + methodName + "' in class '" + currentClass.name + "'");
+        }
+
         MethodSymbol methodSymbol = new MethodSymbol();
         methodSymbol.name = methodName;
         methodSymbol.returnType = returnType;
@@ -217,7 +239,6 @@ class MyVisitor extends GJDepthFirst<String, Void>{
         currentClass.methods.put(methodName, methodSymbol);
         currentMethod = null;
 
-        //super.visit(n, argu);
         return null;
     }
 
@@ -243,6 +264,9 @@ class MyVisitor extends GJDepthFirst<String, Void>{
         String name = n.f1.accept(this, argu);
 
         if (currentMethod != null) {
+            if (currentMethod.parameters.containsKey(name)) {
+                throw new Exception("Duplicate parameter '" + name + "' in method '" + currentMethod.name + "'");
+            }
             currentMethod.parameters.put(name, type);
         }
     

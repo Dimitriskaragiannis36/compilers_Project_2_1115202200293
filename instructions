@@ -6,7 +6,9 @@
 Θα πρέπει να υπάρχει όλος ο φάκελος της εργασίας όπως δόθηκε προκειμένου να τρέξει σωστά το πρόγραμμα.
 
 Έγινε χρήση των δοσμένων:
-    αυτούσια:         Main.java
-    τροποποιημένα:    Makefile, MyVisitor.java, Example.java
+    αυτούσια:         minijava-examples-new
+    τροποποιημένα:    Makefile, MyVisitor.java, Example.java, Main.java
 
-Για την εκτέλεση:   java Main Example.java
+Για την εκτέλεση:   java Main Example.java 
+                    java Main Example.java minijava-examples-new/BinaryTree.java
+                    java Main minijava-examples-new/minijava-error-extra/BadAssign.java minijava-examples-new/minijava-extra/Add.java
