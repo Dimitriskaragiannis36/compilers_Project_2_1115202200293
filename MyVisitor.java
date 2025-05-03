@@ -31,7 +31,7 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     * f1 -> ( TypeDeclaration() )*
     * f2 -> <EOF>
     */
-    @Override
+     @Override
     public String visit(Goal n, Void argu) throws Exception {
         n.f0.accept(this, argu); 
         n.f1.accept(this, argu); 
@@ -291,7 +291,7 @@ class MyVisitor extends GJDepthFirst<String, Void>{
      */
     @Override
     public String visit(FormalParameterTerm n, Void argu) throws Exception {
-        n.f1.accept(this, argu); // process the actual parameter
+        n.f1.accept(this, argu); 
         return null;
     }
 
