@@ -30,6 +30,20 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
             this.currClass = cls;
             this.currMethod = null;
         }
+
+        public String lookupVariableType(String name) {
+            if (currMethod != null && currMethod.locals.containsKey(name)) {
+                return currMethod.locals.get(name);
+            }
+            if (currMethod != null && currMethod.parameters.containsKey(name)) {
+                return currMethod.parameters.get(name);
+            }
+            if (currClass.fields.containsKey(name)) {
+                return currClass.fields.get(name);
+            }
+            return null;
+        }
+
     }
 
     /**
@@ -316,6 +330,17 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     }
 
     /**
+    * f0 -> ArrayType()
+    *       | BooleanType()
+    *       | IntegerType()
+    *       | Identifier()
+    */
+    @Override
+    public String visit(Type n, Context argu) throws Exception {
+        return n.f0.accept(this, argu);
+    }
+
+    /**
     * f0 -> BooleanArrayType()
     *       | IntegerArrayType()
     */
@@ -323,6 +348,26 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     public String visit(ArrayType n, Context argu) throws Exception {
         return n.f0.accept(this, argu);
     }      
+
+    /**
+    * f0 -> "boolean"
+    * f1 -> "["
+    * f2 -> "]"
+    */
+    @Override
+    public String visit(BooleanArrayType n, Context argu) throws Exception {
+        return "boolean[]";
+    }
+
+    /**
+    * f0 -> "int"
+    * f1 -> "["
+    * f2 -> "]"
+    */
+    @Override
+    public String visit(IntegerArrayType n, Context argu) throws Exception {
+        return "int[]";
+    }
 
     /**
     * f0 -> "boolean"
@@ -338,7 +383,123 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     @Override
     public String visit(IntegerType n, Context argu) throws Exception {
         return "int";
-    }     
+    }  
+    
+    /**
+    * f0 -> Block()
+    *       | AssignmentStatement()
+    *       | ArrayAssignmentStatement()
+    *       | IfStatement()
+    *       | WhileStatement()
+    *       | PrintStatement()
+    */
+    @Override
+    public String visit(Statement n, Context argu) throws Exception {
+        return n.f0.accept(this, argu);
+    }
+
+    /**
+    * f0 -> "{"
+    * f1 -> ( Statement() )*
+    * f2 -> "}"
+    */
+    @Override
+    public String visit(Block n, Context argu) throws Exception {
+        for (Node stmt : n.f1.nodes) {
+            stmt.accept(this, argu);
+        }
+        return null;
+    }
+
+    /**
+     * f0 -> Identifier()
+    * f1 -> "="
+    * f2 -> Expression()
+    * f3 -> ";"
+    */
+    @Override
+    public String visit(AssignmentStatement n, Context argu) throws Exception {
+        String varName = n.f0.accept(this, argu); 
+        String varType = argu.lookupVariableType(varName); 
+
+        if (varType == null) {
+            throw new Exception("Undefined variable: " + varName);
+        }
+
+        String exprType = n.f2.accept(this, argu); 
+
+        if (!varType.equals(exprType)) {
+            throw new Exception("Type mismatch in assignment to variable '" + varName +
+                "'. Expected: " + varType + ", but got: " + exprType);
+        }
+
+        return null;
+    }
+
+        /**
+    * f0 -> AndExpression()
+    *       | CompareExpression()
+    *       | PlusExpression()
+    *       | MinusExpression()
+    *       | TimesExpression()
+    *       | ArrayLookup()
+    *       | ArrayLength()
+    *       | MessageSend()
+    *       | Clause()
+    */
+    @Override
+    public String visit(Expression n, Context argu) throws Exception {
+        return n.f0.accept(this, argu);
+    }
+
+    /**
+    * f0 -> Clause()
+    * f1 -> "&&"
+    * f2 -> Clause()
+    */
+    @Override
+    public String visit(AndExpression n, Context argu) throws Exception {
+        n.f0.accept(this, argu);
+        n.f2.accept(this, argu);
+
+        return null;
+    }
+
+        /**
+     * f0 -> PrimaryExpression()
+    * f1 -> "+"
+    * f2 -> PrimaryExpression()
+    */
+    @Override
+    public String visit(PlusExpression n, Context argu) throws Exception {
+        n.f0.accept(this, argu);
+        n.f2.accept(this, argu);
+        return "int";
+    }
+
+    /**
+    * f0 -> NotExpression()
+    *       | PrimaryExpression()
+    */
+    @Override
+    public String visit(Clause n, Context argu) throws Exception {
+        return n.f0.accept(this, argu);
+    }
+
+    /**
+    * f0 -> IntegerLiteral()
+    *       | TrueLiteral()
+    *       | FalseLiteral()
+    *       | Identifier()
+    *       | ThisExpression()
+    *       | ArrayAllocationExpression()
+    *       | AllocationExpression()
+    *       | BracketExpression()
+    */
+    @Override
+    public String visit(PrimaryExpression n, Context argu) throws Exception {
+        return n.f0.accept(this, argu);
+    }
 
     /**
     * f0 -> <IDENTIFIER>
@@ -346,6 +507,16 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     @Override
     public String visit(Identifier n, Context argu) throws Exception {
         return n.f0.toString();
+    }
+
+    /**
+    * f0 -> "!"
+    * f1 -> Clause()
+    */
+    @Override
+    public String visit(NotExpression n, Context argu) throws Exception {
+        n.f1.accept(this, argu);
+        return null;
     }
 
     //ξεχωριστή βοηθητική συνάρτηση για τα μεγέθη
