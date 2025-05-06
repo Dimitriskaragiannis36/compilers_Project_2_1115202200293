@@ -111,27 +111,21 @@ class MyVisitor extends GJDepthFirst<String, Void>{
      */
     @Override
     public String visit(ClassDeclaration n, Void argu) throws Exception {
-        n.f0.accept(this, argu);
-        
-        String classname = n.f1.accept(this, argu);
+        String className = n.f1.accept(this, argu);
+        ClassSymbol classSymbol = new ClassSymbol();
+        classSymbol.name = className;
 
-        if (symbolTable.containsKey(classname)) {
-            throw new Exception("Duplicate class declaration: " + classname);
+        if (symbolTable.containsKey(className)) {
+            throw new Exception("Duplicate class declaration: " + className);
         }
 
-        ClassSymbol classSymbol = new ClassSymbol();
-        classSymbol.name = classname;
-        symbolTable.put(classname, classSymbol);
+        symbolTable.put(className, classSymbol);
         currentClass = classSymbol;
 
-        n.f2.accept(this, argu);
         n.f3.accept(this, argu);
         n.f4.accept(this, argu);
-        n.f5.accept(this, argu);
 
         currentClass = null;
-        System.out.println();
-
         return null;
     }
 
@@ -147,30 +141,27 @@ class MyVisitor extends GJDepthFirst<String, Void>{
      */
     @Override
     public String visit(ClassExtendsDeclaration n, Void argu) throws Exception {
-        n.f0.accept(this, argu);
-
-        String classname = n.f1.accept(this, argu);
-
-        if (symbolTable.containsKey(classname)) {
-            throw new Exception("Duplicate class declaration: " + classname);
+        String className = n.f1.accept(this, argu);
+        if (symbolTable.containsKey(className)) {
+            throw new Exception("Duplicate class declaration: " + className);
         }
 
-        n.f2.accept(this, argu);
-        String parentname = n.f3.accept(this, argu);
+        String parentName = n.f3.accept(this, argu);
+        if (!symbolTable.containsKey(parentName)) {
+            throw new Exception("Parent class " + parentName + " not declared before use in class " + className);
+        }
 
         ClassSymbol classSymbol = new ClassSymbol();
-        classSymbol.name = classname;
-        classSymbol.parent = parentname;
-        symbolTable.put(classname, classSymbol);
+        classSymbol.name = className;
+        classSymbol.parent = parentName;
+
+        symbolTable.put(className, classSymbol);
         currentClass = classSymbol;
 
-        n.f4.accept(this, argu);
         n.f5.accept(this, argu);
         n.f6.accept(this, argu);
-        n.f7.accept(this, argu);
 
         currentClass = null;
-
         return null;
     }
 
@@ -181,7 +172,6 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     */
     @Override
     public String visit(VarDeclaration n, Void argu) throws Exception {
-        String _ret=null;
         String type = n.f0.accept(this, argu);
         String varName = n.f1.accept(this, argu);
         
@@ -196,7 +186,7 @@ class MyVisitor extends GJDepthFirst<String, Void>{
             }
             currentClass.fields.put(varName, type);
         }
-        return _ret;
+        return null;
     }
 
     /**
@@ -218,10 +208,6 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     public String visit(MethodDeclaration n, Void argu) throws Exception {
         String returnType = n.f1.accept(this, null);
         String methodName = n.f2.accept(this, null);
-
-        if (currentClass.methods.containsKey(methodName)) {
-            throw new Exception("Duplicate method '" + methodName + "' in class '" + currentClass.name + "'");
-        }
 
         MethodSymbol methodSymbol = new MethodSymbol();
         methodSymbol.name = methodName;
@@ -270,7 +256,7 @@ class MyVisitor extends GJDepthFirst<String, Void>{
             currentMethod.parameters.put(name, type);
         }
     
-        return type + " " + name;
+        return null;
     }
 
     /**
@@ -492,7 +478,7 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     public String visit(CompareExpression n, Void argu) throws Exception {
         n.f0.accept(this, argu);
         n.f2.accept(this, argu);
-        return "boolean";
+        return null;
     }
 
     /**
@@ -504,7 +490,7 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     public String visit(PlusExpression n, Void argu) throws Exception {
         n.f0.accept(this, argu);
         n.f2.accept(this, argu);
-        return "int";
+        return null;
     }
 
     /**
@@ -516,7 +502,7 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     public String visit(MinusExpression n, Void argu) throws Exception {
         n.f0.accept(this, argu);
         n.f2.accept(this, argu);
-        return "int";
+        return null;
     }
 
     /**
@@ -528,7 +514,7 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     public String visit(TimesExpression n, Void argu) throws Exception {
         n.f0.accept(this, argu);
         n.f2.accept(this, argu);
-        return "int";
+        return null;
     }
 
     /**
@@ -541,7 +527,7 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     public String visit(ArrayLookup n, Void argu) throws Exception {
         n.f0.accept(this, argu); 
         n.f2.accept(this, argu); 
-        return "int";
+        return null;
     }
 
     /**

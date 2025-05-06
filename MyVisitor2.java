@@ -436,7 +436,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         return null;
     }
 
-        /**
+    /**
     * f0 -> AndExpression()
     *       | CompareExpression()
     *       | PlusExpression()
@@ -459,21 +459,115 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     */
     @Override
     public String visit(AndExpression n, Context argu) throws Exception {
-        n.f0.accept(this, argu);
-        n.f2.accept(this, argu);
-
-        return null;
+        String leftType = n.f0.accept(this, argu);
+        String rightType = n.f2.accept(this, argu);
+    
+        if (!leftType.equals("boolean") || !rightType.equals("boolean")) {
+            throw new Exception("Operator '&&' requires boolean operands. Got: " + leftType + " and " + rightType);
+        }
+    
+        return "boolean";
     }
 
-        /**
+    /**
+    * f0 -> PrimaryExpression()
+    * f1 -> "<"
+    * f2 -> PrimaryExpression()
+    */
+    @Override
+    public String visit(CompareExpression n, Context argu) throws Exception {
+        String leftType = n.f0.accept(this, argu);
+        String rightType = n.f2.accept(this, argu);
+    
+        if (!leftType.equals("int") || !rightType.equals("int")) {
+            throw new Exception("Operator '<' requires int operands. Got: " + leftType + " and " + rightType);
+        }
+        return "boolean";
+    }
+
+    /**
      * f0 -> PrimaryExpression()
     * f1 -> "+"
     * f2 -> PrimaryExpression()
     */
     @Override
     public String visit(PlusExpression n, Context argu) throws Exception {
-        n.f0.accept(this, argu);
-        n.f2.accept(this, argu);
+        String leftType = n.f0.accept(this, argu);
+        String rightType = n.f2.accept(this, argu);
+    
+        if (!leftType.equals("int") || !rightType.equals("int")) {
+            throw new Exception("Operator '+' requires int operands. Got: " + leftType + " and " + rightType);
+        }
+        return "int";
+    }
+
+    /**
+    * f0 -> PrimaryExpression()
+    * f1 -> "-"
+    * f2 -> PrimaryExpression()
+    */
+    @Override
+    public String visit(MinusExpression n, Context argu) throws Exception {
+        String leftType = n.f0.accept(this, argu);
+        String rightType = n.f2.accept(this, argu);
+    
+        if (!leftType.equals("int") || !rightType.equals("int")) {
+            throw new Exception("Operator '+' requires int operands. Got: " + leftType + " and " + rightType);
+        }
+        return "int";
+    }
+
+    /**
+    * f0 -> PrimaryExpression()
+    * f1 -> "*"
+    * f2 -> PrimaryExpression()
+    */
+    @Override
+    public String visit(TimesExpression n, Context argu) throws Exception {
+        String leftType = n.f0.accept(this, argu);
+        String rightType = n.f2.accept(this, argu);
+    
+        if (!leftType.equals("int") || !rightType.equals("int")) {
+            throw new Exception("Operator '+' requires int operands. Got: " + leftType + " and " + rightType);
+        }
+        return "int";
+    }
+
+    /**
+    * f0 -> PrimaryExpression()
+    * f1 -> "["
+    * f2 -> PrimaryExpression()
+    * f3 -> "]"
+    */
+    @Override
+    public String visit(ArrayLookup n, Context argu) throws Exception {
+        String arrayType = n.f0.accept(this, argu);
+        String indexType = n.f2.accept(this, argu);
+    
+        if (!indexType.equals("int")) {
+            throw new Exception("Array index must be of type int, got: " + indexType);
+        }
+        if (arrayType.equals("int[]")) {
+            return "int";
+        } else if (arrayType.equals("boolean[]")) {
+            return "boolean";
+        } else {
+            throw new Exception("Array lookup requires array type, got: " + arrayType);
+        }
+    }
+
+    /**
+    * f0 -> PrimaryExpression()
+    * f1 -> "."
+    * f2 -> "length"
+    */
+    @Override
+    public String visit(ArrayLength n, Context argu) throws Exception {
+        String arrayType = n.f0.accept(this, argu);
+
+        if (!arrayType.equals("int[]") && !arrayType.equals("boolean[]")) {
+            throw new Exception("'.length' can only be applied to arrays. Got: " + arrayType);
+        }
         return "int";
     }
 
@@ -506,7 +600,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     */
     @Override
     public String visit(Identifier n, Context argu) throws Exception {
-        return n.f0.toString();
+        return n.f0.tokenImage;
     }
 
     /**
@@ -515,8 +609,11 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     */
     @Override
     public String visit(NotExpression n, Context argu) throws Exception {
-        n.f1.accept(this, argu);
-        return null;
+        String innerType = n.f1.accept(this, argu);
+        if (!innerType.equals("boolean")) {
+            throw new Exception("'!' operator requires boolean operand, got: " + innerType);
+        }
+        return "boolean";
     }
 
     //ξεχωριστή βοηθητική συνάρτηση για τα μεγέθη
