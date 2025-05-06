@@ -117,8 +117,6 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
      */
     @Override
     public String visit(ClassDeclaration n, Context argu) throws Exception {
-        n.f0.accept(this, argu);
-        
         String classname = n.f1.accept(this, argu);
 
         MyVisitor.ClassSymbol classSymbol = symbolTable.get(classname);
@@ -274,7 +272,6 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
      */
     @Override
     public String visit(MethodDeclaration n, Context argu) throws Exception {
-
         String returnType = n.f1.accept(this, argu); // Get the declared return type
         String methodName = n.f2.accept(this, argu);
 
@@ -446,9 +443,9 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
 
         String exprType = n.f2.accept(this, argu); 
 
-        if (!varType.equals(exprType)) {
+        if (!isTypeCompatible(exprType, varType)) {
             throw new Exception("Type mismatch in assignment to variable '" + varName +
-                "'. Expected: " + varType + ", but got: " + exprType);
+                                "'. Expected: " + varType + ", but got: " + exprType);
         }
 
         return null;
@@ -648,8 +645,28 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
 
     //ξεχωριστή βοηθητική συνάρτηση για για το αν οι τύποι είναι συμβατοί
     private boolean isTypeCompatible(String actualType, String expectedType) {
-        if (actualType == null) return expectedType.equals("void"); 
-        return actualType.equals(expectedType); 
+        if (actualType.equals(expectedType)) {
+            return true;
+        }
+    
+        MyVisitor.ClassSymbol actualClass = symbolTable.get(actualType);
+        MyVisitor.ClassSymbol expectedClass = symbolTable.get(expectedType);
+    
+        if (actualClass != null && expectedClass != null) {
+            String currentParent = actualClass.parent;
+            while (currentParent != null) {
+                if (currentParent.equals(expectedType)) {
+                    return true;
+                }
+                MyVisitor.ClassSymbol parentSymbol = symbolTable.get(currentParent);
+                if (parentSymbol == null) {
+                    break; // Should not happen if symbol table is built correctly
+                }
+                currentParent = parentSymbol.parent;
+            }
+        }
+    
+        return false;
     }
 }
 
