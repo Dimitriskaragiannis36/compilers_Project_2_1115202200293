@@ -175,9 +175,8 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         currentClass = classSymbol;
 
         System.out.println("-----------");
-        System.out.println("Class: " + classname);
+        System.out.println("Class: " + classname + " extends " + parentname);
     
-        
         MyVisitor.ClassSymbol parentClass = symbolTable.get(parentname);
         if (parentClass == null) {
             throw new Exception("Parent class not found: " + parentname);
@@ -188,27 +187,15 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         n.f6.accept(this, classContext); 
         
         int fieldOffset = 0;
-        int methodOffset = 0;
     
-        
         for (Map.Entry<String, String> entry : parentClass.fields.entrySet()) {
             String fieldName = entry.getKey();
             String fieldType = entry.getValue();
-            System.out.println(parentname + "." + fieldName + " : " + fieldOffset);
-            fieldOffsets.put(parentname + "." + fieldName, fieldOffset);
+            System.out.println(classname + "." + fieldName + " : " + fieldOffset);
+            fieldOffsets.put(classname + "." + fieldName, fieldOffset);
             fieldOffset += getSize(fieldType);
         }
     
-       
-        Map<String, Integer> inheritedMethodOffsets = new LinkedHashMap<>();
-        for (String methodName : parentClass.methods.keySet()) {
-            inheritedMethodOffsets.put(methodName, methodOffset);
-            System.out.println(parentname + "." + methodName + " : " + methodOffset);
-            methodOffsets.put(parentname + "." + methodName, methodOffset);
-            methodOffset += 8;
-        }
-    
-        
         for (Map.Entry<String, String> field : classSymbol.fields.entrySet()) {
             String fieldName = field.getKey();
             String fieldType = field.getValue();
@@ -216,21 +203,42 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
             fieldOffsets.put(classname + "." + fieldName, fieldOffset);
             fieldOffset += getSize(fieldType);
         }
-    
-        for (String methodName : classSymbol.methods.keySet()) {
-            if (inheritedMethodOffsets.containsKey(methodName)) {
-                
-                int inheritedOffset = inheritedMethodOffsets.get(methodName);
-                System.out.println(classname + "." + methodName + " : " + inheritedOffset);
-                methodOffsets.put(classname + "." + methodName, inheritedOffset);
+
+        Map<String, Integer> vtableOffsets = new LinkedHashMap<>();
+        int vtableOffset = 0;
+        Map<String, Integer> inheritedMethodOffsets = new LinkedHashMap<>();
+       
+        for (Map.Entry<String, MyVisitor.MethodSymbol> entry : parentClass.methods.entrySet()) {
+            String methodName = entry.getKey();
+            if (!classSymbol.methods.containsKey(methodName)) {
+                System.out.println(classname + "." + methodName + " : " + vtableOffset);
+                methodOffsets.put(classname + "." + methodName, vtableOffset);
+                vtableOffsets.put(methodName, vtableOffset);
+                inheritedMethodOffsets.put(methodName, vtableOffset); 
+                vtableOffset += 8;
             } else {
                 
-                System.out.println(classname + "." + methodName + " : " + methodOffset);
-                methodOffsets.put(classname + "." + methodName, methodOffset);
-                methodOffset += 8;
+                if (methodOffsets.containsKey(parentname + "." + methodName)) {
+                    inheritedMethodOffsets.put(methodName, methodOffsets.get(parentname + "." + methodName));
+                }
             }
         }
     
+        for (Map.Entry<String, MyVisitor.MethodSymbol> entry : classSymbol.methods.entrySet()) {
+            String methodName = entry.getKey();
+            if (!vtableOffsets.containsKey(methodName)) { 
+                System.out.println(classname + "." + methodName + " : " + vtableOffset);
+                methodOffsets.put(classname + "." + methodName, vtableOffset);
+                vtableOffsets.put(methodName, vtableOffset);
+                vtableOffset += 8;
+            } else { 
+                if (methodOffsets.containsKey(parentname + "." + methodName)) {
+                    int inheritedOffset = methodOffsets.get(parentname + "." + methodName);
+                    System.out.println(classname + "." + methodName + " : " + inheritedOffset);
+                    methodOffsets.put(classname + "." + methodName, inheritedOffset);
+                }
+            }
+        }
         return null;
     }
 
@@ -242,6 +250,10 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     public String visit(VarDeclaration n, Context argu) throws Exception {
         String type = n.f0.accept(this, argu);
         String varName = n.f1.accept(this, argu);
+
+        if (!isValidType(type)) {
+            throw new Exception("Invalid type declaration: " + type + " for variable " + varName + " in class " + argu.currClass.name + (argu.currMethod != null ? " method " + argu.currMethod.name : ""));
+        }
         return null;
     }
     
@@ -263,7 +275,8 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     @Override
     public String visit(MethodDeclaration n, Context argu) throws Exception {
 
-        String methodName = n.f2.accept(this, argu); 
+        String returnType = n.f1.accept(this, argu); // Get the declared return type
+        String methodName = n.f2.accept(this, argu);
 
         MyVisitor.MethodSymbol methodSymbol = argu.currClass.methods.get(methodName);
         if (methodSymbol == null) {
@@ -275,11 +288,16 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         Context methodContext = new Context(argu.currClass, currentMethod);
 
         if (n.f4.present()) {
-            n.f4.node.accept(this, methodContext); 
-        } 
-        n.f7.accept(this, methodContext); 
-        n.f8.accept(this, methodContext); 
-        n.f10.accept(this, methodContext); 
+            n.f4.node.accept(this, methodContext);
+        }
+        n.f7.accept(this, methodContext);
+        String returnedType = n.f10.accept(this, methodContext);
+
+        if (!isTypeCompatible(returnedType, returnType)) {
+            throw new Exception("Return type mismatch in method " + methodName + " of class " + argu.currClass.name + ". Expected " + returnType + ", got " + returnedType);
+        }
+
+        currentMethod = null; 
 
         return null;
     }
@@ -623,5 +641,15 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         return 8; 
     }
     
+    //ξεχωριστή βοηθητική συνάρτηση για για την εύρεση του τύπου
+    private boolean isValidType(String type) {
+        return type.equals("int") || type.equals("boolean") || type.equals("int[]") || type.equals("boolean[]") || symbolTable.containsKey(type);
+    }
+
+    //ξεχωριστή βοηθητική συνάρτηση για για το αν οι τύποι είναι συμβατοί
+    private boolean isTypeCompatible(String actualType, String expectedType) {
+        if (actualType == null) return expectedType.equals("void"); 
+        return actualType.equals(expectedType); 
+    }
 }
 

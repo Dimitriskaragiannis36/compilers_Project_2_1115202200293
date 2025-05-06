@@ -12,14 +12,14 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     ClassSymbol currentClass = null;
     MethodSymbol currentMethod = null;
 
-    class ClassSymbol {
+    public static class ClassSymbol {
         String name;
         String parent = null; 
         LinkedHashMap<String, String> fields = new LinkedHashMap<>();
         LinkedHashMap<String, MethodSymbol> methods = new LinkedHashMap<>();
     }
 
-    class MethodSymbol {
+    public static class MethodSymbol {
         String name;
         String returnType;
         LinkedHashMap<String, String> parameters = new LinkedHashMap<>();
