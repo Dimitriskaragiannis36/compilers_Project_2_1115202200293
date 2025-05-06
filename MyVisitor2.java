@@ -587,6 +587,80 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     }
 
     /**
+    * f0 -> PrimaryExpression()
+    * f1 -> "."
+    * f2 -> Identifier()
+    * f3 -> "("
+    * f4 -> ( ExpressionList() )?
+    * f5 -> ")"
+    */
+    @Override
+    public String visit(MessageSend n, Context argu) throws Exception {
+        String objectType = n.f0.accept(this, argu); // Τύπος του αντικειμένου στο οποίο γίνεται η κλήση
+        String methodName = n.f2.accept(this, argu); // Όνομα της μεθόδου
+        List<String> argumentTypes = new ArrayList<>(); // Λίστα για τους τύπους των ορισμάτων
+
+        // Αν υπάρχει λίστα ορισμάτων, συλλέγουμε τους τύπους τους
+        if (n.f4.present()) {
+            argumentTypes = visit(n.f4.node, argu); // Υποθέτουμε ότι η επίσκεψη της ExpressionList θα επιστρέψει μια λίστα τύπων
+        }
+
+        MyVisitor.ClassSymbol classSymbol = symbolTable.get(objectType);
+        if (classSymbol == null) {
+            throw new Exception("Object of type " + objectType + " does not exist.");
+        }
+
+        MyVisitor.MethodSymbol methodSymbol = lookupMethod(classSymbol, methodName, argumentTypes);
+
+        if (methodSymbol == null) {
+            StringBuilder error = new StringBuilder("Method " + methodName + "(");
+            for (int i = 0; i < argumentTypes.size(); i++) {
+                error.append(argumentTypes.get(i));
+                if (i < argumentTypes.size() - 1) {
+                    error.append(", ");
+                }
+            }
+            error.append(") not found in class " + objectType + " or its superclasses.");
+            throw new Exception(error.toString());
+        }
+
+        return methodSymbol.returnType;
+    }
+
+    /**
+     * f0 -> Expression()
+    * f1 -> ExpressionTail()
+    */
+    @Override
+    public String visit(ExpressionList n, Context argu) throws Exception {
+        n.f0.accept(this, argu); 
+        n.f1.accept(this, argu);
+
+        return null;
+    }
+
+    /**
+     * f0 -> ( ExpressionTerm() )*
+    */
+    @Override
+    public String visit(ExpressionTail n, Context argu) throws Exception {
+        n.f0.accept(this, argu);
+
+        return null;
+    }
+
+    /**
+     * f0 -> ","
+    * f1 -> Expression()
+    */
+    @Override
+    public String visit(ExpressionTerm n, Context argu) throws Exception {
+        n.f1.accept(this, argu);
+
+        return null;
+    }
+
+    /**
     * f0 -> NotExpression()
     *       | PrimaryExpression()
     */
@@ -611,11 +685,40 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     }
 
     /**
+    * f0 -> <INTEGER_LITERAL>
+    */
+    @Override
+    public String visit(IntegerLiteral n, Context argu) throws Exception {
+        return "int";
+    }
+
+    /**
+    * f0 -> "true"
+    */
+    @Override
+    public String visit(TrueLiteral n, Context argu) throws Exception {
+        return "boolean";
+    }
+
+    /**
+     * f0 -> "false"
+    */
+    @Override
+    public String visit(FalseLiteral n, Context argu) throws Exception {
+        return "boolean";
+    }
+
+    /**
     * f0 -> <IDENTIFIER>
     */
     @Override
     public String visit(Identifier n, Context argu) throws Exception {
-        return n.f0.tokenImage;
+            String varName = n.f0.tokenImage;
+    String varType = argu.lookupVariableType(varName);
+    if (varType == null) {
+        throw new Exception("Undefined identifier: " + varName);
+    }
+    return varType;
     }
 
     /**
@@ -667,6 +770,38 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         }
     
         return false;
+    }
+
+    //ξεχωριστή βοηθητική συνάρτηση για την αναζήτηση μιας μεθόδου σε μια κλάση και τις υπερκλάσεις της
+    private MyVisitor.MethodSymbol lookupMethod(MyVisitor.ClassSymbol classSymbol, String methodName, List<String> argumentTypes) {
+        MyVisitor.ClassSymbol currentClass = classSymbol;
+        while (currentClass != null) {
+            if (currentClass.methods.containsKey(methodName)) {
+                MyVisitor.MethodSymbol method = currentClass.methods.get(methodName);
+                if (compareParameterTypes(method.parameters.values(), argumentTypes)) {
+                    return method;
+                }
+            }
+            if (currentClass.parent == null) {
+                break;
+            }
+            currentClass = symbolTable.get(currentClass.parent);
+        }
+        return null;
+    }
+
+    //ξεχωριστή βοηθητική συνάρτηση για τη σύγκριση των τύπων των παραμέτρων
+    private boolean compareParameterTypes(Collection<String> parameterTypes, List<String> argumentTypes) {
+        if (parameterTypes.size() != argumentTypes.size()) {
+            return false;
+        }
+        Iterator<String> paramIterator = parameterTypes.iterator();
+        for (String argType : argumentTypes) {
+            if (!isTypeCompatible(argType, paramIterator.next())) {
+                return false;
+            }
+        }
+        return true;
     }
 }
 
