@@ -135,8 +135,8 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         n.f3.accept(this, classContext);
         n.f4.accept(this, classContext);
 
-        System.out.println("-----------");
-        System.out.println("Class: " + classname);
+        System.out.println("-----------Class " + classname + "-----------");
+        System.out.println("--Variables---");
 
         int fieldOffset = 0;
         for (Map.Entry<String, String> field : currentClass.fields.entrySet()) {
@@ -147,7 +147,8 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
             fieldOffsets.put(classname + "." + fieldName, fieldOffset);
             fieldOffset += getSize(fieldType);
         }
-
+        
+        System.out.println("---Methods---");
         int methodOffset = 0;
         for (String methodName : currentClass.methods.keySet()) {
             System.out.println(classname + "." + methodName + " : " + methodOffset);
@@ -708,7 +709,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
             throw new Exception("Class not found: " + objectType);
         }
 
-        String methodName = ((Identifier) n.f2).f0.toString();
+        String methodName = n.f2.f0.toString();
 
         MyVisitor.MethodSymbol methodSymbol = lookupMethodInClassHierarchy(classSymbol, methodName);
         if (methodSymbol == null) {
@@ -831,21 +832,20 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     public String visit(Identifier n, Context argu) throws Exception {
         String varName = n.f0.toString();
     
-        // Μην κάνεις lookup αν δεν έχεις context
-        if (argu == null) {
-            return varName;  // απλά επιστρέφεις το όνομα ως string
+        if (argu == null || argu.currMethod == null || argu.currClass == null) {
+            return varName;
         }
     
         String varType = argu.lookupVariableType(varName);
     
         if (varType == null) {
             throw new Exception("Undefined variable: '" + varName + "' in method '" +
-                                (argu.currMethod != null ? argu.currMethod.name : "null") +
-                                "', class '" + (argu.currClass != null ? argu.currClass.name : "null") + "'");
+                                argu.currMethod.name + "', class '" + argu.currClass.name + "'");
         }
     
         return varType;
     }
+    
     
 
     /**
