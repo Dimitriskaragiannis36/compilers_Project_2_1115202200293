@@ -431,7 +431,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     }
 
     /**
-     * f0 -> Identifier()
+    * f0 -> Identifier()
     * f1 -> "="
     * f2 -> Expression()
     * f3 -> ";"
@@ -466,10 +466,28 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     */
     @Override
     public String visit(ArrayAssignmentStatement n, Context argu) throws Exception {
-        n.f0.f0.toString(); 
+        String varName = n.f0.f0.toString();
+        String varType = argu.lookupVariableType(varName);
     
-        n.f2.accept(this, argu); 
-        n.f5.accept(this, argu); 
+        if (varType == null) {
+            throw new Exception("Undefined array variable: " + varName);
+        }
+        if (!varType.equals("int[]") && !varType.equals("boolean[]")) {
+            throw new Exception("Variable '" + varName + "' is not an array. Found: " + varType);
+        }
+    
+        String indexType = n.f2.accept(this, argu);
+        if (!indexType.equals("int")) {
+            throw new Exception("Array index must be int. Got: " + indexType);
+        }
+    
+        String valueType = n.f5.accept(this, argu);
+        String expectedElementType = varType.equals("int[]") ? "int" : "boolean";
+    
+        if (!valueType.equals(expectedElementType)) {
+            throw new Exception("Type mismatch in array assignment to '" + varName +
+                                "'. Expected: " + expectedElementType + ", got: " + valueType);
+        }
         return null;
     }
 
@@ -484,10 +502,13 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     */
     @Override
     public String visit(IfStatement n, Context argu) throws Exception {
-        n.f2.accept(this, argu); 
-        n.f4.accept(this, argu); 
+        String condType = n.f2.accept(this, argu);
+        if (!condType.equals("boolean")) {
+            throw new Exception("'if' condition must be boolean. Got: " + condType);
+        }
+    
+        n.f4.accept(this, argu);
         n.f6.accept(this, argu);
-
         return null;
     }
 
@@ -730,7 +751,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         return n.f0.accept(this, argu);
     }
 
-     /**
+    /**
     * f0 -> <INTEGER_LITERAL>
     */
     @Override
@@ -747,7 +768,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     }
 
     /**
-     * f0 -> "false"
+    * f0 -> "false"
     */
     @Override
     public String visit(FalseLiteral n, Context argu) throws Exception {
@@ -759,7 +780,12 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     */
     @Override
     public String visit(Identifier n, Context argu) throws Exception {
-        return n.f0.toString();
+        String varName = n.f0.toString();
+        String varType = argu.lookupVariableType(varName);
+        if (varType == null) {
+            throw new Exception("Undefined variable: " + varName);
+        }
+        return varType;
     }
 
     /**
