@@ -1,3 +1,5 @@
+import java.util.ArrayList;
+import java.util.List;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -87,13 +89,17 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         if (cls == null)
             throw new Exception("Main class not found: " + className);
     
-        currentClass = cls;
+        MyVisitor.MethodSymbol mainMethod = cls.methods.get("main");
+        if (mainMethod == null)
+            throw new Exception("Main method not found in class: " + className);
     
-        
-        Context context = new Context(cls);
+        currentClass = cls;
+        currentMethod = mainMethod;
+    
+        Context context = new Context(cls, mainMethod);
     
         n.f14.accept(this, context); 
-        n.f15.accept(this, context);
+        n.f15.accept(this, context); 
     
         return null;
     }
@@ -246,7 +252,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     * f2 -> ";"/* */
     @Override
     public String visit(VarDeclaration n, Context argu) throws Exception {
-        String type = n.f0.accept(this, argu);
+        String type = n.f0.accept(this, null);
         String varName = n.f1.accept(this, argu);
 
         if (!isValidType(type)) {
@@ -272,7 +278,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
      */
     @Override
     public String visit(MethodDeclaration n, Context argu) throws Exception {
-        String returnType = n.f1.accept(this, argu); // Get the declared return type
+        String returnType = n.f1.accept(this, argu); 
         String methodName = n.f2.accept(this, argu);
 
         MyVisitor.MethodSymbol methodSymbol = argu.currClass.methods.get(methodName);
@@ -316,7 +322,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
      */
     @Override
     public String visit(FormalParameter n, Context argu) throws Exception{
-        String type = n.f0.accept(this, argu);
+        String type = n.f0.accept(this, null);
         String name = n.f1.accept(this, argu);
         if (!isValidType(type)) {
             throw new Exception("Invalid parameter type: " + type + " for parameter " + name +
@@ -521,10 +527,13 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     */
     @Override
     public String visit(WhileStatement n, Context argu) throws Exception {
-        n.f2.accept(this, argu); 
-        n.f4.accept(this, argu); 
-    
-        return null;
+    String condType = n.f2.accept(this, argu);
+    if (!condType.equals("boolean")) {
+        throw new Exception("'while' condition must be boolean. Got: " + condType);
+    }
+
+    n.f4.accept(this, argu);
+    return null;
     }
 
     /**
@@ -536,7 +545,10 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     */
     @Override
     public String visit(PrintStatement n, Context argu) throws Exception {
-        n.f2.accept(this, argu); 
+        String exprType = n.f2.accept(this, argu);
+        if (!exprType.equals("int")) {
+            throw new Exception("System.out.println only accepts int. Got: " + exprType);
+        }
         return null;
     }
 
@@ -685,13 +697,50 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     */
     @Override
     public String visit(MessageSend n, Context argu) throws Exception {
-        n.f0.accept(this, argu);
-        n.f2.accept(this, argu);
-        if (n.f4.present()) {
-            n.f4.accept(this, argu);  
+        String objectType = n.f0.accept(this, argu);
+
+        if (objectType.equals("int") || objectType.equals("boolean") || objectType.endsWith("[]")) {
+            throw new Exception("Cannot call methods on primitive or array type: " + objectType);
         }
-    
-        return null;
+
+        MyVisitor.ClassSymbol classSymbol = symbolTable.get(objectType);
+        if (classSymbol == null) {
+            throw new Exception("Class not found: " + objectType);
+        }
+
+        String methodName = ((Identifier) n.f2).f0.toString();
+
+        MyVisitor.MethodSymbol methodSymbol = lookupMethodInClassHierarchy(classSymbol, methodName);
+        if (methodSymbol == null) {
+            throw new Exception("Method '" + methodName + "' not found in class '" + objectType + "' or its superclasses.");
+        }
+
+        List<String> actualArgTypes = new ArrayList<>();
+        if (n.f4.present()) {
+            ExpressionList exprList = (ExpressionList) n.f4.node;
+            actualArgTypes.add(exprList.f0.accept(this, argu));  // πρώτο argument
+            for (Node node : exprList.f1.f0.nodes) {
+                ExpressionTerm term = (ExpressionTerm) node;
+                actualArgTypes.add(term.f1.accept(this, argu));
+            }
+        }
+
+        List<String> formalArgTypes = new ArrayList<>(methodSymbol.parameters.values());
+        if (actualArgTypes.size() != formalArgTypes.size()) {
+            throw new Exception("Method '" + methodName + "' in class '" + objectType +
+                                "' expects " + formalArgTypes.size() + " arguments, but got " + actualArgTypes.size());
+        }
+
+        for (int i = 0; i < actualArgTypes.size(); i++) {
+            String actual = actualArgTypes.get(i);
+            String formal = formalArgTypes.get(i);
+            if (!isTypeCompatible(actual, formal)) {
+                throw new Exception("Argument " + (i + 1) + " of method '" + methodName +
+                                    "' expected '" + formal + "', got '" + actual + "'");
+            }
+        }
+
+        return methodSymbol.returnType;
     }
 
     /**
@@ -781,12 +830,23 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     @Override
     public String visit(Identifier n, Context argu) throws Exception {
         String varName = n.f0.toString();
-        String varType = argu.lookupVariableType(varName);
-        if (varType == null) {
-            throw new Exception("Undefined variable: " + varName);
+    
+        // Μην κάνεις lookup αν δεν έχεις context
+        if (argu == null) {
+            return varName;  // απλά επιστρέφεις το όνομα ως string
         }
+    
+        String varType = argu.lookupVariableType(varName);
+    
+        if (varType == null) {
+            throw new Exception("Undefined variable: '" + varName + "' in method '" +
+                                (argu.currMethod != null ? argu.currMethod.name : "null") +
+                                "', class '" + (argu.currClass != null ? argu.currClass.name : "null") + "'");
+        }
+    
         return varType;
     }
+    
 
     /**
     * f0 -> "this"
@@ -839,7 +899,11 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     */
     @Override
     public String visit(AllocationExpression n, Context argu) throws Exception {
-        return n.f1.accept(this, argu);
+        String className = n.f1.accept(this, null);
+        if (!symbolTable.containsKey(className)) {
+            throw new Exception("Cannot allocate unknown class type: " + className);
+        }
+        return className;
     }
 
     /**
@@ -902,5 +966,20 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     
         return false;
     }
+
+    private MyVisitor.MethodSymbol lookupMethodInClassHierarchy(MyVisitor.ClassSymbol classSym, String methodName) {
+        while (classSym != null) {
+            if (classSym.methods.containsKey(methodName)) {
+                return classSym.methods.get(methodName);
+            }
+            String parentName = classSym.parent;
+            classSym = (parentName != null) ? symbolTable.get(parentName) : null;
+            if (classSym == null && parentName != null) {
+                System.err.println("Parent class not found: " + parentName);
+            }
+        }
+        return null;
+    }
+    
 }
 
