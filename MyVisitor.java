@@ -277,6 +277,7 @@ class MyVisitor extends GJDepthFirst<String, Void>{
      */
     @Override
     public String visit(FormalParameterTerm n, Void argu) throws Exception {
+        n.f0.accept(this, argu);
         n.f1.accept(this, argu); 
         return null;
     }
@@ -387,8 +388,7 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     */
     @Override
     public String visit(ArrayAssignmentStatement n, Void argu) throws Exception {
-        n.f0.f0.toString(); 
-    
+        n.f0.accept(this, argu);
         n.f2.accept(this, argu); 
         n.f5.accept(this, argu); 
         return null;
@@ -553,7 +553,10 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     public String visit(MessageSend n, Void argu) throws Exception {
         n.f0.accept(this, argu);
         n.f2.accept(this, argu);
-        n.f4.accept(this, argu);
+        if (n.f4.present()) {
+            n.f4.accept(this, argu);  
+        }
+    
         return null;
     }
 
@@ -619,7 +622,7 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     */
     @Override
     public String visit(IntegerLiteral n, Void argu) throws Exception {
-        return n.f0.toString();
+        return "int";
     }
 
     /**
@@ -627,7 +630,7 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     */
     @Override
     public String visit(TrueLiteral n, Void argu) throws Exception {
-        return null;
+        return "boolean";
     }
 
     /**
@@ -635,7 +638,7 @@ class MyVisitor extends GJDepthFirst<String, Void>{
     */
     @Override
     public String visit(FalseLiteral n, Void argu) throws Exception {
-        return null;
+        return "boolean";
     }
 
     /**

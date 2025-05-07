@@ -318,6 +318,10 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     public String visit(FormalParameter n, Context argu) throws Exception{
         String type = n.f0.accept(this, argu);
         String name = n.f1.accept(this, argu);
+        if (!isValidType(type)) {
+            throw new Exception("Invalid parameter type: " + type + " for parameter " + name +
+                " in method " + argu.currMethod.name + " of class " + argu.currClass.name);
+        }
         return null;
     }
 
@@ -448,6 +452,70 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
                                 "'. Expected: " + varType + ", but got: " + exprType);
         }
 
+        return null;
+    }
+
+     /**
+    * f0 -> Identifier()
+    * f1 -> "["
+    * f2 -> Expression()
+    * f3 -> "]"
+    * f4 -> "="
+    * f5 -> Expression()
+    * f6 -> ";"
+    */
+    @Override
+    public String visit(ArrayAssignmentStatement n, Context argu) throws Exception {
+        n.f0.f0.toString(); 
+    
+        n.f2.accept(this, argu); 
+        n.f5.accept(this, argu); 
+        return null;
+    }
+
+    /**
+     * f0 -> "if"
+    * f1 -> "("
+    * f2 -> Expression()
+    * f3 -> ")"
+    * f4 -> Statement()
+    * f5 -> "else"
+    * f6 -> Statement()
+    */
+    @Override
+    public String visit(IfStatement n, Context argu) throws Exception {
+        n.f2.accept(this, argu); 
+        n.f4.accept(this, argu); 
+        n.f6.accept(this, argu);
+
+        return null;
+    }
+
+    /**
+     * f0 -> "while"
+    * f1 -> "("
+    * f2 -> Expression()
+    * f3 -> ")"
+    * f4 -> Statement()
+    */
+    @Override
+    public String visit(WhileStatement n, Context argu) throws Exception {
+        n.f2.accept(this, argu); 
+        n.f4.accept(this, argu); 
+    
+        return null;
+    }
+
+    /**
+     * f0 -> "System.out.println"
+    * f1 -> "("
+    * f2 -> Expression()
+    * f3 -> ")"
+    * f4 -> ";"
+    */
+    @Override
+    public String visit(PrintStatement n, Context argu) throws Exception {
+        n.f2.accept(this, argu); 
         return null;
     }
 
@@ -596,39 +664,17 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     */
     @Override
     public String visit(MessageSend n, Context argu) throws Exception {
-        String objectType = n.f0.accept(this, argu); // Τύπος του αντικειμένου στο οποίο γίνεται η κλήση
-        String methodName = n.f2.accept(this, argu); // Όνομα της μεθόδου
-        List<String> argumentTypes = new ArrayList<>(); // Λίστα για τους τύπους των ορισμάτων
-
-        // Αν υπάρχει λίστα ορισμάτων, συλλέγουμε τους τύπους τους
+        n.f0.accept(this, argu);
+        n.f2.accept(this, argu);
         if (n.f4.present()) {
-            argumentTypes = visit(n.f4.node, argu); // Υποθέτουμε ότι η επίσκεψη της ExpressionList θα επιστρέψει μια λίστα τύπων
+            n.f4.accept(this, argu);  
         }
-
-        MyVisitor.ClassSymbol classSymbol = symbolTable.get(objectType);
-        if (classSymbol == null) {
-            throw new Exception("Object of type " + objectType + " does not exist.");
-        }
-
-        MyVisitor.MethodSymbol methodSymbol = lookupMethod(classSymbol, methodName, argumentTypes);
-
-        if (methodSymbol == null) {
-            StringBuilder error = new StringBuilder("Method " + methodName + "(");
-            for (int i = 0; i < argumentTypes.size(); i++) {
-                error.append(argumentTypes.get(i));
-                if (i < argumentTypes.size() - 1) {
-                    error.append(", ");
-                }
-            }
-            error.append(") not found in class " + objectType + " or its superclasses.");
-            throw new Exception(error.toString());
-        }
-
-        return methodSymbol.returnType;
+    
+        return null;
     }
 
     /**
-     * f0 -> Expression()
+    * f0 -> Expression()
     * f1 -> ExpressionTail()
     */
     @Override
@@ -640,7 +686,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     }
 
     /**
-     * f0 -> ( ExpressionTerm() )*
+    * f0 -> ( ExpressionTerm() )*
     */
     @Override
     public String visit(ExpressionTail n, Context argu) throws Exception {
@@ -650,7 +696,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     }
 
     /**
-     * f0 -> ","
+    * f0 -> ","
     * f1 -> Expression()
     */
     @Override
@@ -684,7 +730,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         return n.f0.accept(this, argu);
     }
 
-    /**
+     /**
     * f0 -> <INTEGER_LITERAL>
     */
     @Override
@@ -713,12 +759,61 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     */
     @Override
     public String visit(Identifier n, Context argu) throws Exception {
-            String varName = n.f0.tokenImage;
-    String varType = argu.lookupVariableType(varName);
-    if (varType == null) {
-        throw new Exception("Undefined identifier: " + varName);
+        return n.f0.toString();
     }
-    return varType;
+
+    /**
+    * f0 -> "this"
+    */
+    @Override
+    public String visit(ThisExpression n, Context argu) throws Exception {
+        return "this";
+    }
+
+    /**
+     * f0 -> BooleanArrayAllocationExpression()
+    *       | IntegerArrayAllocationExpression()
+    */
+    @Override
+    public String visit(ArrayAllocationExpression n, Context argu) throws Exception {
+        return n.f0.accept(this, argu);
+    }
+
+    /**
+     * f0 -> "new"
+    * f1 -> "boolean"
+    * f2 -> "["
+    * f3 -> Expression()
+    * f4 -> "]"
+    */
+    @Override
+    public String  visit(BooleanArrayAllocationExpression n, Context argu) throws Exception {
+        n.f3.accept(this, argu);
+        return "boolean[]";
+    }
+
+    /**
+     * f0 -> "new"
+    * f1 -> "int"
+    * f2 -> "["
+    * f3 -> Expression()
+    * f4 -> "]"
+    */
+    @Override
+    public String visit(IntegerArrayAllocationExpression n, Context argu) throws Exception {
+        n.f3.accept(this, argu); 
+        return "int[]";
+    }
+
+    /**
+     * f0 -> "new"
+    * f1 -> Identifier()
+    * f2 -> "("
+    * f3 -> ")"
+    */
+    @Override
+    public String visit(AllocationExpression n, Context argu) throws Exception {
+        return n.f1.accept(this, argu);
     }
 
     /**
@@ -732,6 +827,16 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
             throw new Exception("'!' operator requires boolean operand, got: " + innerType);
         }
         return "boolean";
+    }
+
+    /**
+    * f0 -> "("
+    * f1 -> Expression()
+    * f2 -> ")"
+    */
+    @Override
+    public String visit(BracketExpression n, Context argu) throws Exception {
+        return n.f1.accept(this, argu);
     }
 
     //ξεχωριστή βοηθητική συνάρτηση για τα μεγέθη
@@ -763,45 +868,13 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
                 }
                 MyVisitor.ClassSymbol parentSymbol = symbolTable.get(currentParent);
                 if (parentSymbol == null) {
-                    break; // Should not happen if symbol table is built correctly
+                    break; 
                 }
                 currentParent = parentSymbol.parent;
             }
         }
     
         return false;
-    }
-
-    //ξεχωριστή βοηθητική συνάρτηση για την αναζήτηση μιας μεθόδου σε μια κλάση και τις υπερκλάσεις της
-    private MyVisitor.MethodSymbol lookupMethod(MyVisitor.ClassSymbol classSymbol, String methodName, List<String> argumentTypes) {
-        MyVisitor.ClassSymbol currentClass = classSymbol;
-        while (currentClass != null) {
-            if (currentClass.methods.containsKey(methodName)) {
-                MyVisitor.MethodSymbol method = currentClass.methods.get(methodName);
-                if (compareParameterTypes(method.parameters.values(), argumentTypes)) {
-                    return method;
-                }
-            }
-            if (currentClass.parent == null) {
-                break;
-            }
-            currentClass = symbolTable.get(currentClass.parent);
-        }
-        return null;
-    }
-
-    //ξεχωριστή βοηθητική συνάρτηση για τη σύγκριση των τύπων των παραμέτρων
-    private boolean compareParameterTypes(Collection<String> parameterTypes, List<String> argumentTypes) {
-        if (parameterTypes.size() != argumentTypes.size()) {
-            return false;
-        }
-        Iterator<String> paramIterator = parameterTypes.iterator();
-        for (String argType : argumentTypes) {
-            if (!isTypeCompatible(argType, paramIterator.next())) {
-                return false;
-            }
-        }
-        return true;
     }
 }
 
