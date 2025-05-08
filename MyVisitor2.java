@@ -19,7 +19,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         this.symbolTable = symbolTable;
     }
 
-    public class Context {
+    public static class Context {
         public MyVisitor.ClassSymbol currClass;
         public MyVisitor.MethodSymbol currMethod;
 
@@ -43,14 +43,6 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
             if (currClass.fields.containsKey(name)) {
                 return currClass.fields.get(name);
             }
-
-            if (currClass != null && currClass.parent != null) {
-                MyVisitor.ClassSymbol parentClass = symbolTable.get(currClass.parent); 
-                if (parentClass != null && parentClass.fields.containsKey(name)) {
-                    return parentClass.fields.get(name);
-                }
-            }
-
             return null;
         }
 
@@ -143,7 +135,6 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         n.f3.accept(this, classContext);
         n.f4.accept(this, classContext);
 
-        System.out.println();
         System.out.println("-----------Class " + classname + "-----------");
         System.out.println("--Variables---");
 
@@ -188,10 +179,9 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         }
         currentClass = classSymbol;
 
-        System.out.println();
-        System.out.println("-----------Class " + classname + "-----------");
-        
-
+        System.out.println("-----------");
+        System.out.println("Class: " + classname + " extends " + parentname);
+    
         MyVisitor.ClassSymbol parentClass = symbolTable.get(parentname);
         if (parentClass == null) {
             throw new Exception("Parent class not found: " + parentname);
@@ -201,16 +191,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         n.f5.accept(this, classContext); 
         n.f6.accept(this, classContext); 
         
-        System.out.println("--Variables---");
         int fieldOffset = 0;
-    
-        for (Map.Entry<String, String> entry : parentClass.fields.entrySet()) {
-            String fieldName = entry.getKey();
-            String fieldType = entry.getValue();
-            System.out.println(classname + "." + fieldName + " : " + fieldOffset);
-            fieldOffsets.put(classname + "." + fieldName, fieldOffset);
-            fieldOffset += getSize(fieldType);
-        }
     
         for (Map.Entry<String, String> field : classSymbol.fields.entrySet()) {
             String fieldName = field.getKey();
@@ -220,7 +201,6 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
             fieldOffset += getSize(fieldType);
         }
 
-        System.out.println("---Methods---");
         Map<String, Integer> vtableOffsets = new LinkedHashMap<>();
         int vtableOffset = 0;
         Map<String, Integer> inheritedMethodOffsets = new LinkedHashMap<>();
@@ -291,7 +271,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
      */
     @Override
     public String visit(MethodDeclaration n, Context argu) throws Exception {
-        String returnType = n.f1.accept(this, null); 
+        String returnType = n.f1.accept(this, argu); 
         String methodName = n.f2.accept(this, argu);
 
         MyVisitor.MethodSymbol methodSymbol = argu.currClass.methods.get(methodName);
@@ -731,7 +711,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         List<String> actualArgTypes = new ArrayList<>();
         if (n.f4.present()) {
             ExpressionList exprList = (ExpressionList) n.f4.node;
-            actualArgTypes.add(exprList.f0.accept(this, argu));  
+            actualArgTypes.add(exprList.f0.accept(this, argu));  // πρώτο argument
             for (Node node : exprList.f1.f0.nodes) {
                 ExpressionTerm term = (ExpressionTerm) node;
                 actualArgTypes.add(term.f1.accept(this, argu));
@@ -844,26 +824,18 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     public String visit(Identifier n, Context argu) throws Exception {
         String varName = n.f0.toString();
     
-        if (argu == null) {
-            if (isValidType(varName) || symbolTable.containsKey(varName)) {
-                return varName;
-            } else {
-                throw new Exception("Unknown type: '" + varName + "'");
-            }
+        if (argu == null || argu.currMethod == null || argu.currClass == null) {
+            return varName;
         }
     
         String varType = argu.lookupVariableType(varName);
     
-        if (varType != null) {
-            return varType;
-        }
-        
-        if (symbolTable.containsKey(varName)) {
-            return varName; 
+        if (varType == null) {
+            throw new Exception("Undefined variable: '" + varName + "' in method '" +
+                                argu.currMethod.name + "', class '" + argu.currClass.name + "'");
         }
     
-        throw new Exception("Undefined variable or class: '" + varName + "' in method '" +
-                            argu.currMethod.name + "', class '" + argu.currClass.name + "'");
+        return varType;
     }
     
     

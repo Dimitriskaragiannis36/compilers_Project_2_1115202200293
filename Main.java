@@ -13,6 +13,7 @@ public class Main {
 
         for (String filename : args) {
             FileInputStream fis = null;
+            System.out.println("=== Processing file: " + filename + " ===");
             try{
                 fis = new FileInputStream(filename);
                 MiniJavaParser parser = new MiniJavaParser(fis);
@@ -33,6 +34,9 @@ public class Main {
             }
             catch(FileNotFoundException ex){
                 System.err.println(ex.getMessage());
+            }
+            catch (Exception ex) {
+                System.out.println(ex.getMessage());
             }
             finally{
                 try{
