@@ -22,15 +22,19 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     public static class Context {
         public MyVisitor.ClassSymbol currClass;
         public MyVisitor.MethodSymbol currMethod;
-
-        public Context(MyVisitor.ClassSymbol cls, MyVisitor.MethodSymbol mthd) {
+        public LinkedHashMap<String, MyVisitor.ClassSymbol> symbolTable;
+        
+        public Context(MyVisitor.ClassSymbol cls, MyVisitor.MethodSymbol mthd,
+                    LinkedHashMap<String, MyVisitor.ClassSymbol> symbolTable) {
             this.currClass = cls;
             this.currMethod = mthd;
+            this.symbolTable = symbolTable;
         }
 
-        public Context(MyVisitor.ClassSymbol cls) {
+        public Context(MyVisitor.ClassSymbol cls,
+                    LinkedHashMap<String, MyVisitor.ClassSymbol> symbolTable) {
             this.currClass = cls;
-            this.currMethod = null;
+            this.symbolTable = symbolTable;
         }
 
         public String lookupVariableType(String name) {
@@ -40,8 +44,15 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
             if (currMethod != null && currMethod.parameters.containsKey(name)) {
                 return currMethod.parameters.get(name);
             }
-            if (currClass.fields.containsKey(name)) {
-                return currClass.fields.get(name);
+            //ψάχνουμε και στις υπερκλάσεις
+            MyVisitor.ClassSymbol cls = currClass;
+            while (cls != null) {
+                if (cls.fields.containsKey(name)) {
+                    return cls.fields.get(name);
+                }
+
+                if (cls.parent == null) break;
+                cls = symbolTable.get(cls.parent);  
             }
             return null;
         }
@@ -96,7 +107,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         currentClass = cls;
         currentMethod = mainMethod;
     
-        Context context = new Context(cls, mainMethod);
+        Context context = new Context(cls, mainMethod, symbolTable);
     
         n.f14.accept(this, context); 
         n.f15.accept(this, context); 
@@ -131,10 +142,11 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         }
         currentClass = classSymbol;
 
-        Context classContext = new Context(currentClass);
+        Context classContext = new Context(currentClass, symbolTable);
         n.f3.accept(this, classContext);
         n.f4.accept(this, classContext);
 
+        System.out.println();
         System.out.println("-----------Class " + classname + "-----------");
         System.out.println("--Variables---");
 
@@ -179,19 +191,24 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         }
         currentClass = classSymbol;
 
-        System.out.println("-----------");
-        System.out.println("Class: " + classname + " extends " + parentname);
-    
+        System.out.println();
+        System.out.println("-----------Class " + classname + "-----------");
+        System.out.println("--Variables---");
+
         MyVisitor.ClassSymbol parentClass = symbolTable.get(parentname);
         if (parentClass == null) {
             throw new Exception("Parent class not found: " + parentname);
         }
         
-        Context classContext = new Context(currentClass);
+        Context classContext = new Context(currentClass, symbolTable);
         n.f5.accept(this, classContext); 
         n.f6.accept(this, classContext); 
         
         int fieldOffset = 0;
+
+        for (Map.Entry<String, String> parentField : parentClass.fields.entrySet()) {
+            fieldOffset += getSize(parentField.getValue());
+        }
     
         for (Map.Entry<String, String> field : classSymbol.fields.entrySet()) {
             String fieldName = field.getKey();
@@ -204,38 +221,40 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         Map<String, Integer> vtableOffsets = new LinkedHashMap<>();
         int vtableOffset = 0;
         Map<String, Integer> inheritedMethodOffsets = new LinkedHashMap<>();
-       
+
+        System.out.println("---Methods---");
+
+        //μεταφέρουμε τα methods του γονέα — χωρίς εκτύπωση
         for (Map.Entry<String, MyVisitor.MethodSymbol> entry : parentClass.methods.entrySet()) {
             String methodName = entry.getKey();
-            if (!classSymbol.methods.containsKey(methodName)) {
-                System.out.println(classname + "." + methodName + " : " + vtableOffset);
-                methodOffsets.put(classname + "." + methodName, vtableOffset);
-                vtableOffsets.put(methodName, vtableOffset);
-                inheritedMethodOffsets.put(methodName, vtableOffset); 
-                vtableOffset += 8;
-            } else {
-                
-                if (methodOffsets.containsKey(parentname + "." + methodName)) {
-                    inheritedMethodOffsets.put(methodName, methodOffsets.get(parentname + "." + methodName));
-                }
-            }
+            int offset = methodOffsets.get(parentname + "." + methodName); // offset από τον parent
+
+            methodOffsets.put(classname + "." + methodName, offset);
+            vtableOffsets.put(methodName, offset);
+            inheritedMethodOffsets.put(methodName, offset);
+
+            vtableOffset = Math.max(vtableOffset, offset + 8);  // keep track of the next available offset
         }
-    
+
+        //εκτύπωση μόνο για νέα ή overridden methods
         for (Map.Entry<String, MyVisitor.MethodSymbol> entry : classSymbol.methods.entrySet()) {
             String methodName = entry.getKey();
-            if (!vtableOffsets.containsKey(methodName)) { 
+
+            //αν έχει γίνει override
+            if (parentClass.methods.containsKey(methodName)) {
+                int inheritedOffset = methodOffsets.get(parentname + "." + methodName);
+                System.out.println(classname + "." + methodName + " : " + inheritedOffset);
+                methodOffsets.put(classname + "." + methodName, inheritedOffset);
+            }
+            //αν είναι νέο method, τότε το εκτυπώνουμε και του δίνουμε νέο offset
+            else if (!vtableOffsets.containsKey(methodName)) {
                 System.out.println(classname + "." + methodName + " : " + vtableOffset);
                 methodOffsets.put(classname + "." + methodName, vtableOffset);
                 vtableOffsets.put(methodName, vtableOffset);
                 vtableOffset += 8;
-            } else { 
-                if (methodOffsets.containsKey(parentname + "." + methodName)) {
-                    int inheritedOffset = methodOffsets.get(parentname + "." + methodName);
-                    System.out.println(classname + "." + methodName + " : " + inheritedOffset);
-                    methodOffsets.put(classname + "." + methodName, inheritedOffset);
-                }
             }
         }
+
         return null;
     }
 
@@ -243,7 +262,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     * f0 -> Type()
     * f1 -> Identifier()
     * f2 -> ";"/* */
-    @Override
+    /*@Override
     public String visit(VarDeclaration n, Context argu) throws Exception {
         String type = n.f0.accept(this, null);
         String varName = n.f1.accept(this, argu);
@@ -251,8 +270,9 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         if (!isValidType(type)) {
             throw new Exception("Invalid type declaration: " + type + " for variable " + varName + " in class " + argu.currClass.name + (argu.currMethod != null ? " method " + argu.currMethod.name : ""));
         }
+
         return null;
-    }
+    }/* 
     
     /**
      * f0 -> "public"
@@ -274,6 +294,10 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         String returnType = n.f1.accept(this, argu); 
         String methodName = n.f2.accept(this, argu);
 
+        if (methodName.equals(argu.currClass.name) && !returnType.equals("void")) {
+            throw new Exception("Constructor-like method is not allowed in class " + argu.currClass.name + ": " + methodName);
+        }
+
         MyVisitor.MethodSymbol methodSymbol = argu.currClass.methods.get(methodName);
         if (methodSymbol == null) {
             throw new Exception("Method not found in class: " + argu.currClass.name + " -> " + methodName);
@@ -281,7 +305,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
 
         currentMethod = methodSymbol;
 
-        Context methodContext = new Context(argu.currClass, currentMethod);
+        Context methodContext = new Context(argu.currClass, currentMethod, symbolTable);
 
         if (n.f4.present()) {
             n.f4.node.accept(this, methodContext);
@@ -440,16 +464,16 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         String varName = n.f0.accept(this, argu); 
         String varType = argu.lookupVariableType(varName); 
 
-        if (varType == null) {
+        /*if (varType == null) {
             throw new Exception("Undefined variable: " + varName);
-        }
+        }*/
 
         String exprType = n.f2.accept(this, argu); 
 
-        if (!isTypeCompatible(exprType, varType)) {
+        /*if (!isTypeCompatible(exprType, varType)) {
             throw new Exception("Type mismatch in assignment to variable '" + varName +
                                 "'. Expected: " + varType + ", but got: " + exprType);
-        }
+        }*/
 
         return null;
     }
@@ -830,10 +854,10 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     
         String varType = argu.lookupVariableType(varName);
     
-        if (varType == null) {
-            throw new Exception("Undefined variable: '" + varName + "' in method '" +
+       /*  if (varType == null) {
+            throw new Exception("Undefined variableOK: '" + varName + "' in method '" +
                                 argu.currMethod.name + "', class '" + argu.currClass.name + "'");
-        }
+        } */
     
         return varType;
     }
@@ -930,7 +954,19 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     
     //ξεχωριστή βοηθητική συνάρτηση για για την εύρεση του τύπου
     private boolean isValidType(String type) {
-        return type.equals("int") || type.equals("boolean") || type.equals("int[]") || type.equals("boolean[]") || symbolTable.containsKey(type);
+        //επιτρέπουμε μόνο αυτά
+        if (type.equals("int") || type.equals("boolean") ||
+            type.equals("int[]") || type.equals("boolean[]")) {
+            return true;
+        }
+
+        //αν τελειώνει σε [], είναι array type — και αφού δεν είναι τα νόμιμα, είναι άκυρο
+        if (type.endsWith("[]")) {
+            return false;  
+        }
+
+        //αν είναι έγκυρο user-defined class
+        return symbolTable.containsKey(type);  
     }
 
     //ξεχωριστή βοηθητική συνάρτηση για για το αν οι τύποι είναι συμβατοί
