@@ -262,7 +262,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     * f0 -> Type()
     * f1 -> Identifier()
     * f2 -> ";"/* */
-    /*@Override
+    @Override
     public String visit(VarDeclaration n, Context argu) throws Exception {
         String type = n.f0.accept(this, null);
         String varName = n.f1.accept(this, argu);
@@ -272,7 +272,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         }
 
         return null;
-    }/* 
+    }
     
     /**
      * f0 -> "public"
@@ -464,16 +464,16 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         String varName = n.f0.accept(this, argu); 
         String varType = argu.lookupVariableType(varName); 
 
-        /*if (varType == null) {
+        if (varType == null) {
             throw new Exception("Undefined variable: " + varName);
-        }*/
+        }
 
         String exprType = n.f2.accept(this, argu); 
 
-        /*if (!isTypeCompatible(exprType, varType)) {
+        if (!isTypeCompatible(exprType, varType)) {
             throw new Exception("Type mismatch in assignment to variable '" + varName +
                                 "'. Expected: " + varType + ", but got: " + exprType);
-        }*/
+        }
 
         return null;
     }
@@ -854,10 +854,10 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     
         String varType = argu.lookupVariableType(varName);
     
-       /*  if (varType == null) {
+         if (varType == null) {
             throw new Exception("Undefined variableOK: '" + varName + "' in method '" +
                                 argu.currMethod.name + "', class '" + argu.currClass.name + "'");
-        } */
+        } 
     
         return varType;
     }

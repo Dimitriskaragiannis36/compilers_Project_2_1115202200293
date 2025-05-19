@@ -209,6 +209,10 @@ class MyVisitor extends GJDepthFirst<String, Void>{
         String returnType = n.f1.accept(this, null);
         String methodName = n.f2.accept(this, null);
 
+        if (currentClass.methods.containsKey(methodName)) {
+            throw new Exception("Duplicate method declaration '" + methodName + "' in class '" + currentClass.name + "'");
+        }
+
         MethodSymbol methodSymbol = new MethodSymbol();
         methodSymbol.name = methodName;
         methodSymbol.returnType = returnType;
