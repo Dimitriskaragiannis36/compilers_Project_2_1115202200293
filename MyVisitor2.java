@@ -95,7 +95,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
      */
     @Override
     public String visit(MainClass n, Context argu) throws Exception {
-        String className = n.f1.accept(this, null);
+        String className = n.f1.accept(this, argu);
         MyVisitor.ClassSymbol cls = symbolTable.get(className);
         if (cls == null)
             throw new Exception("Main class not found: " + className);
@@ -264,7 +264,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     * f2 -> ";"/* */
     @Override
     public String visit(VarDeclaration n, Context argu) throws Exception {
-        String type = n.f0.accept(this, null);
+        String type = n.f0.accept(this, argu);
         String varName = n.f1.accept(this, argu);
 
         if (!isValidType(type)) {
@@ -311,6 +311,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
             n.f4.node.accept(this, methodContext);
         }
         n.f7.accept(this, methodContext);
+        n.f8.accept(this, methodContext);
         String returnedType = n.f10.accept(this, methodContext);
 
         if (!isTypeCompatible(returnedType, returnType)) {
@@ -339,7 +340,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
      */
     @Override
     public String visit(FormalParameter n, Context argu) throws Exception{
-        String type = n.f0.accept(this, null);
+        String type = n.f0.accept(this, argu);
         String name = n.f1.accept(this, argu);
         if (!isValidType(type)) {
             throw new Exception("Invalid parameter type: " + type + " for parameter " + name +
@@ -461,7 +462,8 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     */
     @Override
     public String visit(AssignmentStatement n, Context argu) throws Exception {
-        String varName = n.f0.accept(this, argu); 
+        String varName = n.f0.f0.toString(); 
+        System.out.println("Assignment to varName = " + varName);
         String varType = argu.lookupVariableType(varName); 
 
         if (varType == null) {
@@ -716,6 +718,10 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     public String visit(MessageSend n, Context argu) throws Exception {
         String objectType = n.f0.accept(this, argu);
 
+        if (objectType.equals("this")) {
+            objectType = argu.currClass.name;
+        }
+
         if (objectType.equals("int") || objectType.equals("boolean") || objectType.endsWith("[]")) {
             throw new Exception("Cannot call methods on primitive or array type: " + objectType);
         }
@@ -847,7 +853,12 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     @Override
     public String visit(Identifier n, Context argu) throws Exception {
         String varName = n.f0.toString();
-    
+        System.out.println("Visiting identifier: " + varName);
+        
+        if (symbolTable.containsKey(varName)) {
+            return varName;
+        }
+
         if (argu == null || argu.currMethod == null || argu.currClass == null) {
             return varName;
         }
@@ -862,14 +873,15 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         return varType;
     }
     
-    
-
     /**
     * f0 -> "this"
     */
     @Override
     public String visit(ThisExpression n, Context argu) throws Exception {
-        return "this";
+        if (argu == null || argu.currClass == null) {
+            throw new Exception("Cannot resolve 'this' without class context");
+        }
+        return argu.currClass.name;
     }
 
     /**
