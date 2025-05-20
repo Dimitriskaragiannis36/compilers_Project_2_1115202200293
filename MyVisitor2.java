@@ -8,51 +8,61 @@ import syntaxtree.*;
 import visitor.*;
 
 public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
-    LinkedHashMap<String, MyVisitor.ClassSymbol> symbolTable;
-    MyVisitor.ClassSymbol currentClass = null;
-    MyVisitor.MethodSymbol currentMethod = null;
-
+    //symbol table από MyVisitor 
+    LinkedHashMap<String, MyVisitor.ClassSymbol> symbolTable; // πίνακας συμβόλων
+    //τρέχουσα κλάση από MyVisitor
+    MyVisitor.ClassSymbol currentClass = null; 
+    //τρέχουσα μέθοδος από MyVisitor
+    MyVisitor.MethodSymbol currentMethod = null; 
+    //offsets για τα fields
     HashMap<String, Integer> fieldOffsets = new HashMap<>();  
+    //offsets για τα methods
     HashMap<String, Integer> methodOffsets = new HashMap<>();
-
+    
     public MyVisitor2(LinkedHashMap<String, MyVisitor.ClassSymbol> symbolTable) {
-        this.symbolTable = symbolTable;
+        this.symbolTable = symbolTable; // αρχικοποίηση του πίνακα συμβόλων
     }
-
-    public static class Context {
-        public MyVisitor.ClassSymbol currClass;
-        public MyVisitor.MethodSymbol currMethod;
+    //ξεχωριστή συνάρτηση για να ελέγξουμε αν οι τύποι είναι συμβατοί
+    public static class Context { 
+        public MyVisitor.ClassSymbol currClass; //τρέχουσα κλάση
+        public MyVisitor.MethodSymbol currMethod; //τρέχουσα μέθοδος
         public LinkedHashMap<String, MyVisitor.ClassSymbol> symbolTable;
-        
+        //πίνακας συμβόλων
+        //constructor για την κλάση με μέθοδο
         public Context(MyVisitor.ClassSymbol cls, MyVisitor.MethodSymbol mthd,
                     LinkedHashMap<String, MyVisitor.ClassSymbol> symbolTable) {
-            this.currClass = cls;
-            this.currMethod = mthd;
-            this.symbolTable = symbolTable;
+            this.currClass = cls; //τρέχουσα κλάση
+            this.currMethod = mthd; //τρέχουσα μέθοδος
+            this.symbolTable = symbolTable; //πίνακας συμβόλων
         }
-
+        //constructor για την κλάση χωρίς μέθοδο
         public Context(MyVisitor.ClassSymbol cls,
                     LinkedHashMap<String, MyVisitor.ClassSymbol> symbolTable) {
-            this.currClass = cls;
-            this.symbolTable = symbolTable;
+            this.currClass = cls; //τρέχουσα κλάση
+            this.symbolTable = symbolTable; //πίνακας συμβόλων
         }
-
+        //συνάρτηση για να ελέγξουμε αν οι τύποι είναι συμβατοί
         public String lookupVariableType(String name) {
+            //ψάχνουμε πρώτα στη μέθοδο
             if (currMethod != null && currMethod.locals.containsKey(name)) {
                 return currMethod.locals.get(name);
             }
+            //ψάχνουμε και στα fields της κλάσης
             if (currMethod != null && currMethod.parameters.containsKey(name)) {
                 return currMethod.parameters.get(name);
             }
             //ψάχνουμε και στις υπερκλάσεις
             MyVisitor.ClassSymbol cls = currClass;
-            while (cls != null) {
-                if (cls.fields.containsKey(name)) {
+            //αν δεν το βρούμε στη μέθοδο, ψάχνουμε στην κλάση
+            while (cls != null) { 
+                // αν το βρούμε επιστρέφουμε το τύπο
+                if (cls.fields.containsKey(name)) { 
                     return cls.fields.get(name);
                 }
-
-                if (cls.parent == null) break;
-                cls = symbolTable.get(cls.parent);  
+                // αν το βρούμε στις παραμέτρους της μεθόδου 
+                if (cls.parent == null) break; 
+                //αν είναι η ρίζα για την περίπτωση του test73
+                cls = symbolTable.get(cls.parent); 
             }
             return null;
         }
@@ -96,17 +106,18 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     @Override
     public String visit(MainClass n, Context argu) throws Exception {
         String className = n.f1.accept(this, argu);
-        MyVisitor.ClassSymbol cls = symbolTable.get(className);
-        if (cls == null)
+        //αναζητούμε την κλάση
+        MyVisitor.ClassSymbol cls = symbolTable.get(className); 
+        if (cls == null) //αν δεν την βρούμε 
             throw new Exception("Main class not found: " + className);
-    
+        //αναζητούμε την μέθοδο main
         MyVisitor.MethodSymbol mainMethod = cls.methods.get("main");
-        if (mainMethod == null)
+        if (mainMethod == null) //αν δεν την βρούμε
             throw new Exception("Main method not found in class: " + className);
     
-        currentClass = cls;
-        currentMethod = mainMethod;
-    
+        currentClass = cls; //τρέχουσα κλάση
+        currentMethod = mainMethod; //τρέχουσα μέθοδος
+        //δημιουργούμε το context
         Context context = new Context(cls, mainMethod, symbolTable);
     
         n.f14.accept(this, context); 
@@ -135,13 +146,13 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     @Override
     public String visit(ClassDeclaration n, Context argu) throws Exception {
         String classname = n.f1.accept(this, argu);
-
+        //αναζητούμε την κλάση
         MyVisitor.ClassSymbol classSymbol = symbolTable.get(classname);
-        if (classSymbol == null) {
+        if (classSymbol == null) { //αν δεν την βρούμε
             throw new Exception("Class not found in symbol table: " + classname);
         }
-        currentClass = classSymbol;
-
+        currentClass = classSymbol; //τρέχουσα κλάση
+        //δημιουργούμε το context
         Context classContext = new Context(currentClass, symbolTable);
         n.f3.accept(this, classContext);
         n.f4.accept(this, classContext);
@@ -151,18 +162,19 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         System.out.println("--Variables---");
 
         int fieldOffset = 0;
+        //εκτύπωση των fields
         for (Map.Entry<String, String> field : currentClass.fields.entrySet()) {
-            String fieldName = field.getKey();
-            String fieldType = field.getValue();
+            String fieldName = field.getKey(); //όνομα του field
+            String fieldType = field.getValue(); //τύπος του field
 
             System.out.println(classname + "." + fieldName + " : " + fieldOffset);
             fieldOffsets.put(classname + "." + fieldName, fieldOffset);
             fieldOffset += getSize(fieldType);
         }
-        
+        //εκτύπωση των methods
         System.out.println("---Methods---");
         int methodOffset = 0;
-        for (String methodName : currentClass.methods.keySet()) {
+        for (String methodName : currentClass.methods.keySet()) { //όνομα της μεθόδου
             System.out.println(classname + "." + methodName + " : " + methodOffset);
             methodOffsets.put(classname + "." + methodName, methodOffset);
             methodOffset += 8;
@@ -184,48 +196,49 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     public String visit(ClassExtendsDeclaration n, Context argu) throws Exception {
         String classname = n.f1.accept(this, argu);
         String parentname = n.f3.accept(this, argu);
-
-
-
+        //αναζητούμε την κλάση
         MyVisitor.ClassSymbol classSymbol = symbolTable.get(classname);
-        if (classSymbol == null) {
+        if (classSymbol == null) {//αν δεν την βρούμε
             throw new Exception("Class not found: " + classname);
         }
-        currentClass = classSymbol;
+        currentClass = classSymbol; //τρέχουσα κλάση
 
         System.out.println();
         System.out.println("-----------Class " + classname + "-----------");
         System.out.println("--Variables---");
-
+        //αναζητούμε την γονική κλάση
         MyVisitor.ClassSymbol parentClass = symbolTable.get(parentname);
-        if (parentClass == null) {
+        if (parentClass == null) { //αν δεν την βρούμε
             throw new Exception("Parent class not found: " + parentname);
         }
-        
+        //δημιουργούμε το context
         Context classContext = new Context(currentClass, symbolTable);
         n.f5.accept(this, classContext); 
         n.f6.accept(this, classContext); 
         
         int fieldOffset = 0;
+        //εκτύπωση των fields
         for (Map.Entry<String, String> parentField : parentClass.fields.entrySet()) {
-            String fieldKey = parentname + "." + parentField.getKey();
-            Integer parentFieldOffset = fieldOffsets.get(fieldKey);
-            int size = getSize(parentField.getValue());
-            if (parentFieldOffset != null) {
-                fieldOffset = Math.max(fieldOffset, parentFieldOffset + size);
+            String fieldKey = parentname + "." + parentField.getKey(); //όνομα του field
+            Integer parentFieldOffset = fieldOffsets.get(fieldKey); //offset του γονικού field
+            int size = getSize(parentField.getValue()); //τύπος του field
+            if (parentFieldOffset != null) { //αν το βρούμε
+                fieldOffset = Math.max(fieldOffset, parentFieldOffset + size); 
+                //κρατάμε το μέγιστο offset
             }
         }
-
+        //εκτύπωση των fields
         for (Map.Entry<String, String> field : classSymbol.fields.entrySet()) {
-            String fieldName = field.getKey();
-            String fieldType = field.getValue();
+            String fieldName = field.getKey(); //όνομα του field
+            String fieldType = field.getValue(); //τύπος του field
             System.out.println(classname + "." + fieldName + " : " + fieldOffset);
             fieldOffsets.put(classname + "." + fieldName, fieldOffset);
-            fieldOffset += getSize(fieldType);
+            fieldOffset += getSize(fieldType); //αυξάνουμε το offset
         }
-
+        //εκτύπωση των methods
         Map<String, Integer> vtableOffsets = new LinkedHashMap<>();
         int vtableOffset = 0;
+        //μεταφέρουμε τα methods του γονέα
         Map<String, Integer> inheritedMethodOffsets = new LinkedHashMap<>();
 
         System.out.println("---Methods---");
@@ -233,16 +246,16 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         //μεταφέρουμε τα methods του γονέα — χωρίς εκτύπωση
         for (Map.Entry<String, MyVisitor.MethodSymbol> entry : parentClass.methods.entrySet()) {
             String methodName = entry.getKey();
-
+            //αν είναι το main
             if (methodName.equals("main")) continue;
 
-            int offset = methodOffsets.get(parentname + "." + methodName); // offset από τον parent
-
+            int offset = methodOffsets.get(parentname + "." + methodName); //offset από τον parent
+            //αν είναι overridden
             methodOffsets.put(classname + "." + methodName, offset);
             vtableOffsets.put(methodName, offset);
-            inheritedMethodOffsets.put(methodName, offset);
+            inheritedMethodOffsets.put(methodName, offset); //κρατάμε το offset
 
-            vtableOffset = Math.max(vtableOffset, offset + 8);  // keep track of the next available offset
+            vtableOffset = Math.max(vtableOffset, offset + 8); //κρατάμε το μέγιστο offset
         }
 
         //εκτύπωση μόνο για νέα ή overridden methods
@@ -272,8 +285,8 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     public String visit(VarDeclaration n, Context argu) throws Exception {
         String type = n.f0.accept(this, argu);
         String varName = n.f1.accept(this, argu);
-
-        if (!isValidType(type)) {
+        
+        if (!isValidType(type)) { //αν δεν είναι έγκυρος τύπος
             throw new Exception("Invalid type declaration: " + type + " for variable " + varName + " in class " + argu.currClass.name + (argu.currMethod != null ? " method " + argu.currMethod.name : ""));
         }
 
@@ -299,18 +312,20 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     public String visit(MethodDeclaration n, Context argu) throws Exception {
         String returnType = n.f1.accept(this, argu); 
         String methodName = n.f2.accept(this, argu);
-
+        
         if (methodName.equals(argu.currClass.name) && !returnType.equals("void")) {
+            //αν είναι constructor-like method
             throw new Exception("Constructor-like method is not allowed in class " + argu.currClass.name + ": " + methodName);
         }
-
+        
         MyVisitor.MethodSymbol methodSymbol = argu.currClass.methods.get(methodName);
         if (methodSymbol == null) {
+            //αν δεν το βρούμε
             throw new Exception("Method not found in class: " + argu.currClass.name + " -> " + methodName);
         }
 
-        currentMethod = methodSymbol;
-
+        currentMethod = methodSymbol; //τρέχουσα μέθοδος
+        //δημιουργούμε το context
         Context methodContext = new Context(argu.currClass, currentMethod, symbolTable);
 
         if (n.f4.present()) {
@@ -318,13 +333,14 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         }
         n.f7.accept(this, methodContext);
         n.f8.accept(this, methodContext);
-        String returnedType = n.f10.accept(this, methodContext);
-
-        if (!isTypeCompatible(returnedType, returnType)) {
+        String returnedType = n.f10.accept(this, methodContext); 
+        // τύπος της επιστρεφόμενης τιμής
+        
+        if (!isTypeCompatible(returnedType, returnType)) { //αν δεν είναι συμβατοί οι τύποι
             throw new Exception("Return type mismatch in method " + methodName + " of class " + argu.currClass.name + ". Expected " + returnType + ", got " + returnedType);
         }
 
-        currentMethod = null; 
+        currentMethod = null; // επαναφορά της τρέχουσας μεθόδου
 
         return null;
     }
@@ -348,7 +364,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     public String visit(FormalParameter n, Context argu) throws Exception{
         String type = n.f0.accept(this, argu);
         String name = n.f1.accept(this, argu);
-        if (!isValidType(type)) {
+        if (!isValidType(type)) { //αν δεν είναι έγκυρος τύπος
             throw new Exception("Invalid parameter type: " + type + " for parameter " + name +
                 " in method " + argu.currMethod.name + " of class " + argu.currClass.name);
         }
@@ -468,17 +484,16 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     */
     @Override
     public String visit(AssignmentStatement n, Context argu) throws Exception {
-        String varName = n.f0.f0.toString(); 
-        //System.out.println("Assignment to varName = " + varName);
-        String varType = argu.lookupVariableType(varName); 
+        String varName = n.f0.f0.toString(); //όνομα της μεταβλητής
+        String varType = argu.lookupVariableType(varName); //τύπος της μεταβλητής
 
-        if (varType == null) {
+        if (varType == null) { //αν δεν το βρούμε
             throw new Exception("Undefined variable: " + varName);
         }
 
         String exprType = n.f2.accept(this, argu); 
 
-        if (!isTypeCompatible(exprType, varType)) {
+        if (!isTypeCompatible(exprType, varType)) { //αν δεν είναι συμβατοί οι τύποι
             throw new Exception("Type mismatch in assignment to variable '" + varName +
                                 "'. Expected: " + varType + ", but got: " + exprType);
         }
@@ -498,24 +513,26 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     @Override
     public String visit(ArrayAssignmentStatement n, Context argu) throws Exception {
         String varName = n.f0.f0.toString();
-        String varType = argu.lookupVariableType(varName);
+        String varType = argu.lookupVariableType(varName); //τύπος της μεταβλητής
     
-        if (varType == null) {
+        if (varType == null) { //αν δεν το βρούμε
             throw new Exception("Undefined array variable: " + varName);
         }
+        //έλεγχος αν είναι array
         if (!varType.equals("int[]") && !varType.equals("boolean[]")) {
             throw new Exception("Variable '" + varName + "' is not an array. Found: " + varType);
         }
     
         String indexType = n.f2.accept(this, argu);
-        if (!indexType.equals("int")) {
+        if (!indexType.equals("int")) { //έλεγχος αν είναι int
             throw new Exception("Array index must be int. Got: " + indexType);
         }
     
         String valueType = n.f5.accept(this, argu);
+        //έλεγχος αν είναι int ή boolean
         String expectedElementType = varType.equals("int[]") ? "int" : "boolean";
     
-        if (!valueType.equals(expectedElementType)) {
+        if (!valueType.equals(expectedElementType)) { //έλεγχος αν είναι συμβατοί οι τύποι
             throw new Exception("Type mismatch in array assignment to '" + varName +
                                 "'. Expected: " + expectedElementType + ", got: " + valueType);
         }
@@ -534,7 +551,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     @Override
     public String visit(IfStatement n, Context argu) throws Exception {
         String condType = n.f2.accept(this, argu);
-        if (!condType.equals("boolean")) {
+        if (!condType.equals("boolean")) { //έλεγχος αν είναι boolean
             throw new Exception("'if' condition must be boolean. Got: " + condType);
         }
     
@@ -553,7 +570,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     @Override
     public String visit(WhileStatement n, Context argu) throws Exception {
     String condType = n.f2.accept(this, argu);
-    if (!condType.equals("boolean")) {
+    if (!condType.equals("boolean")) { //έλεγχος αν είναι boolean
         throw new Exception("'while' condition must be boolean. Got: " + condType);
     }
 
@@ -571,7 +588,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     @Override
     public String visit(PrintStatement n, Context argu) throws Exception {
         String exprType = n.f2.accept(this, argu);
-        if (!exprType.equals("int")) {
+        if (!exprType.equals("int")) { //έλεγχος αν είναι int
             throw new Exception("System.out.println only accepts int. Got: " + exprType);
         }
         return null;
@@ -602,7 +619,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     public String visit(AndExpression n, Context argu) throws Exception {
         String leftType = n.f0.accept(this, argu);
         String rightType = n.f2.accept(this, argu);
-    
+        //έλεγχος αν είναι boolean
         if (!leftType.equals("boolean") || !rightType.equals("boolean")) {
             throw new Exception("Operator '&&' requires boolean operands. Got: " + leftType + " and " + rightType);
         }
@@ -619,7 +636,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     public String visit(CompareExpression n, Context argu) throws Exception {
         String leftType = n.f0.accept(this, argu);
         String rightType = n.f2.accept(this, argu);
-    
+        //έλεγχος αν είναι int
         if (!leftType.equals("int") || !rightType.equals("int")) {
             throw new Exception("Operator '<' requires int operands. Got: " + leftType + " and " + rightType);
         }
@@ -635,7 +652,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     public String visit(PlusExpression n, Context argu) throws Exception {
         String leftType = n.f0.accept(this, argu);
         String rightType = n.f2.accept(this, argu);
-    
+        //έλεγχος αν είναι int
         if (!leftType.equals("int") || !rightType.equals("int")) {
             throw new Exception("Operator '+' requires int operands. Got: " + leftType + " and " + rightType);
         }
@@ -651,7 +668,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     public String visit(MinusExpression n, Context argu) throws Exception {
         String leftType = n.f0.accept(this, argu);
         String rightType = n.f2.accept(this, argu);
-    
+        //έλεγχος αν είναι int
         if (!leftType.equals("int") || !rightType.equals("int")) {
             throw new Exception("Operator '+' requires int operands. Got: " + leftType + " and " + rightType);
         }
@@ -667,7 +684,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     public String visit(TimesExpression n, Context argu) throws Exception {
         String leftType = n.f0.accept(this, argu);
         String rightType = n.f2.accept(this, argu);
-    
+        //έλεγχος αν είναι int
         if (!leftType.equals("int") || !rightType.equals("int")) {
             throw new Exception("Operator '+' requires int operands. Got: " + leftType + " and " + rightType);
         }
@@ -684,10 +701,11 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     public String visit(ArrayLookup n, Context argu) throws Exception {
         String arrayType = n.f0.accept(this, argu);
         String indexType = n.f2.accept(this, argu);
-    
+        //έλεγχος αν είναι array
         if (!indexType.equals("int")) {
             throw new Exception("Array index must be of type int, got: " + indexType);
         }
+        //έλεγχος αν είναι int[] ή boolean[]
         if (arrayType.equals("int[]")) {
             return "int";
         } else if (arrayType.equals("boolean[]")) {
@@ -705,7 +723,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     @Override
     public String visit(ArrayLength n, Context argu) throws Exception {
         String arrayType = n.f0.accept(this, argu);
-
+        //έλεγχος αν είναι array
         if (!arrayType.equals("int[]") && !arrayType.equals("boolean[]")) {
             throw new Exception("'.length' can only be applied to arrays. Got: " + arrayType);
         }
@@ -723,53 +741,53 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     @Override
     public String visit(MessageSend n, Context argu) throws Exception {
         String objectType = n.f0.accept(this, argu);
-
-        if (objectType.equals("this")) {
-            objectType = argu.currClass.name;
+        
+        if (objectType.equals("this")) { //έλεγχος αν είναι this
+            objectType = argu.currClass.name; //το αντικείμενο είναι η τρέχουσα κλάση
         }
-
+        //έλεγχος αν είναι primitive ή array
         if (objectType.equals("int") || objectType.equals("boolean") || objectType.endsWith("[]")) {
             throw new Exception("Cannot call methods on primitive or array type: " + objectType);
         }
-
+        //έλεγχος αν είναι κλάση
         MyVisitor.ClassSymbol classSymbol = symbolTable.get(objectType);
-        if (classSymbol == null) {
+        if (classSymbol == null) { //αν δεν το βρούμε
             throw new Exception("Class not found: " + objectType);
         }
-
+       
         String methodName = n.f2.f0.toString();
-
+        //έλεγχος αν είναι method
         MyVisitor.MethodSymbol methodSymbol = lookupMethodInClassHierarchy(classSymbol, methodName);
-        if (methodSymbol == null) {
+        if (methodSymbol == null) { //αν δεν το βρούμε
             throw new Exception("Method '" + methodName + "' not found in class '" + objectType + "' or its superclasses.");
         }
-
+        //έλεγχος αν είναι constructor-like method
         List<String> actualArgTypes = new ArrayList<>();
         if (n.f4.present()) {
             ExpressionList exprList = (ExpressionList) n.f4.node;
-            actualArgTypes.add(exprList.f0.accept(this, argu));  // πρώτο argument
+            actualArgTypes.add(exprList.f0.accept(this, argu));  //τύπος του πρώτου όρισματος
             for (Node node : exprList.f1.f0.nodes) {
-                ExpressionTerm term = (ExpressionTerm) node;
+                ExpressionTerm term = (ExpressionTerm) node; //τύπος του επόμενου ορίσματος
                 actualArgTypes.add(term.f1.accept(this, argu));
             }
         }
-
+        //έλεγχος αν είναι constructor-like method
         List<String> formalArgTypes = new ArrayList<>(methodSymbol.parameters.values());
-        if (actualArgTypes.size() != formalArgTypes.size()) {
+        if (actualArgTypes.size() != formalArgTypes.size()) { //έλεγχος αν είναι συμβατοί οι τύποι
             throw new Exception("Method '" + methodName + "' in class '" + objectType +
                                 "' expects " + formalArgTypes.size() + " arguments, but got " + actualArgTypes.size());
         }
-
+        
         for (int i = 0; i < actualArgTypes.size(); i++) {
-            String actual = actualArgTypes.get(i);
-            String formal = formalArgTypes.get(i);
-            if (!isTypeCompatible(actual, formal)) {
+            String actual = actualArgTypes.get(i); //τύπος του ορίσματος
+            String formal = formalArgTypes.get(i); //τύπος του ορίσματος της μεθόδου
+            if (!isTypeCompatible(actual, formal)) { //έλεγχος αν είναι συμβατοί οι τύποι
                 throw new Exception("Argument " + (i + 1) + " of method '" + methodName +
                                     "' expected '" + formal + "', got '" + actual + "'");
             }
         }
 
-        return methodSymbol.returnType;
+        return methodSymbol.returnType; //τύπος επιστροφής της μεθόδου
     }
 
     /**
@@ -858,20 +876,19 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     */
     @Override
     public String visit(Identifier n, Context argu) throws Exception {
-        String varName = n.f0.toString();
-        //System.out.println("Visiting identifier: " + varName);
+        String varName = n.f0.toString(); //όνομα της μεταβλητής
         
-        if (symbolTable.containsKey(varName)) {
+        if (symbolTable.containsKey(varName)) { //αν υπάρχει στην κλάση
             return varName;
         }
-
+        //αν είναι κενό επέστρεψε το όνομα
         if (argu == null || argu.currMethod == null || argu.currClass == null) {
             return varName;
         }
-    
+        //αν είναι τύπος
         String varType = argu.lookupVariableType(varName);
     
-         if (varType == null) {
+        if (varType == null) { //αν δεν το βρούμε
             throw new Exception("Undefined variableOK: '" + varName + "' in method '" +
                                 argu.currMethod.name + "', class '" + argu.currClass.name + "'");
         } 
@@ -884,10 +901,10 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     */
     @Override
     public String visit(ThisExpression n, Context argu) throws Exception {
-        if (argu == null || argu.currClass == null) {
+        if (argu == null || argu.currClass == null) { //αν δεν υπάρχει κλάση
             throw new Exception("Cannot resolve 'this' without class context");
         }
-        return argu.currClass.name;
+        return argu.currClass.name; //επιστρέφουμε την τρέχουσα κλάση
     }
 
     /**
@@ -934,7 +951,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     @Override
     public String visit(AllocationExpression n, Context argu) throws Exception {
         String className = n.f1.accept(this, null);
-        if (!symbolTable.containsKey(className)) {
+        if (!symbolTable.containsKey(className)) {//αν δεν είναι έγκυρη κλάση
             throw new Exception("Cannot allocate unknown class type: " + className);
         }
         return className;
@@ -947,7 +964,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     @Override
     public String visit(NotExpression n, Context argu) throws Exception {
         String innerType = n.f1.accept(this, argu);
-        if (!innerType.equals("boolean")) {
+        if (!innerType.equals("boolean")) {//έλεγχος αν είναι boolean
             throw new Exception("'!' operator requires boolean operand, got: " + innerType);
         }
         return "boolean";
@@ -965,9 +982,9 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
 
     //ξεχωριστή βοηθητική συνάρτηση για τα μεγέθη
     private int getSize(String type) {
-        if (type.equals("int")) return 4;
+        if (type.equals("int")) return 4; 
         if (type.equals("boolean")) return 1;
-        return 8; 
+        return 8; //σε κάθε άλλη περίπτωση
     }
     
     //ξεχωριστή βοηθητική συνάρτηση για για την εύρεση του τύπου
@@ -992,18 +1009,20 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         if (actualType.equals(expectedType)) {
             return true;
         }
-    
+        //έλεγχος αν είναι η κανονική κλάση
         MyVisitor.ClassSymbol actualClass = symbolTable.get(actualType);
+        //έλεγχος αν είναι η αναμενόμενη κλάση
         MyVisitor.ClassSymbol expectedClass = symbolTable.get(expectedType);
-    
+        
         if (actualClass != null && expectedClass != null) {
             String currentParent = actualClass.parent;
-            while (currentParent != null) {
+            while (currentParent != null) {//έλεγχος αν είναι γονική κλάση
                 if (currentParent.equals(expectedType)) {
                     return true;
                 }
+                //το παίρνουμε από τον πίνακα
                 MyVisitor.ClassSymbol parentSymbol = symbolTable.get(currentParent);
-                if (parentSymbol == null) {
+                if (parentSymbol == null) { //αν δεν το βρούμε
                     break; 
                 }
                 currentParent = parentSymbol.parent;
@@ -1013,12 +1032,14 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         return false;
     }
 
+    //ξεχωριστή βοηθητική συνάρτηση για για την εύρεση του τύπου της μεθόδου
     private MyVisitor.MethodSymbol lookupMethodInClassHierarchy(MyVisitor.ClassSymbol classSym, String methodName) {
-        while (classSym != null) {
-            if (classSym.methods.containsKey(methodName)) {
+        while (classSym != null) { //αν δεν είναι κενό
+            if (classSym.methods.containsKey(methodName)) { 
                 return classSym.methods.get(methodName);
             }
             String parentName = classSym.parent;
+            //αν δεν έχει γονική κλάση
             classSym = (parentName != null) ? symbolTable.get(parentName) : null;
             if (classSym == null && parentName != null) {
                 System.err.println("Parent class not found: " + parentName);
