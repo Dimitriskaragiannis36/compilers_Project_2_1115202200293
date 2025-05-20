@@ -1,4 +1,6 @@
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 
 import syntaxtree.*;
 import visitor.*;
@@ -220,6 +222,34 @@ class MyVisitor extends GJDepthFirst<String, Void>{
 
         if (n.f4.present()) {
             n.f4.accept(this, argu);
+        }
+
+        //για overloading
+        String parentName = currentClass.parent;
+        while (parentName != null) {
+            ClassSymbol superClass = symbolTable.get(parentName);
+            if (superClass == null) break;
+
+            if (superClass.methods.containsKey(methodName)) {
+                MethodSymbol inherited = superClass.methods.get(methodName);
+
+                if (!methodSymbol.returnType.equals(inherited.returnType)) {
+                    throw new Exception("Method '" + methodName + "' in class '" + currentClass.name +
+                        "' has different return type than in superclass '" + superClass.name + "'");
+                }
+
+                List<String> inheritedParams = new ArrayList<>(inherited.parameters.values());
+                List<String> currentParams = new ArrayList<>(methodSymbol.parameters.values());
+
+                if (!inheritedParams.equals(currentParams)) {
+                    throw new Exception("Method '" + methodName + "' in class '" + currentClass.name +
+                        "' overloads method in superclass '" + superClass.name + "' with different parameter types");
+                }
+
+                break;
+            }
+
+            parentName = superClass.parent;
         }
 
         n.f7.accept(this, argu);
