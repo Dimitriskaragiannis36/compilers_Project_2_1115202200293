@@ -111,7 +111,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     
         n.f14.accept(this, context); 
         n.f15.accept(this, context); 
-    
+        
         return null;
     }
 
@@ -185,6 +185,8 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         String classname = n.f1.accept(this, argu);
         String parentname = n.f3.accept(this, argu);
 
+
+
         MyVisitor.ClassSymbol classSymbol = symbolTable.get(classname);
         if (classSymbol == null) {
             throw new Exception("Class not found: " + classname);
@@ -205,11 +207,15 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         n.f6.accept(this, classContext); 
         
         int fieldOffset = 0;
-
         for (Map.Entry<String, String> parentField : parentClass.fields.entrySet()) {
-            fieldOffset += getSize(parentField.getValue());
+            String fieldKey = parentname + "." + parentField.getKey();
+            Integer parentFieldOffset = fieldOffsets.get(fieldKey);
+            int size = getSize(parentField.getValue());
+            if (parentFieldOffset != null) {
+                fieldOffset = Math.max(fieldOffset, parentFieldOffset + size);
+            }
         }
-    
+
         for (Map.Entry<String, String> field : classSymbol.fields.entrySet()) {
             String fieldName = field.getKey();
             String fieldType = field.getValue();
@@ -227,6 +233,9 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
         //μεταφέρουμε τα methods του γονέα — χωρίς εκτύπωση
         for (Map.Entry<String, MyVisitor.MethodSymbol> entry : parentClass.methods.entrySet()) {
             String methodName = entry.getKey();
+
+            if (methodName.equals("main")) continue;
+
             int offset = methodOffsets.get(parentname + "." + methodName); // offset από τον parent
 
             methodOffsets.put(classname + "." + methodName, offset);
@@ -243,18 +252,15 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
             //αν έχει γίνει override
             if (parentClass.methods.containsKey(methodName)) {
                 int inheritedOffset = methodOffsets.get(parentname + "." + methodName);
-                System.out.println(classname + "." + methodName + " : " + inheritedOffset);
                 methodOffsets.put(classname + "." + methodName, inheritedOffset);
-            }
+                System.out.println(classname + "." + methodName + " : " + inheritedOffset);
             //αν είναι νέο method, τότε το εκτυπώνουμε και του δίνουμε νέο offset
-            else if (!vtableOffsets.containsKey(methodName)) {
-                System.out.println(classname + "." + methodName + " : " + vtableOffset);
+            } else {
                 methodOffsets.put(classname + "." + methodName, vtableOffset);
-                vtableOffsets.put(methodName, vtableOffset);
+                System.out.println(classname + "." + methodName + " : " + vtableOffset);
                 vtableOffset += 8;
             }
         }
-
         return null;
     }
 
@@ -463,7 +469,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     @Override
     public String visit(AssignmentStatement n, Context argu) throws Exception {
         String varName = n.f0.f0.toString(); 
-        System.out.println("Assignment to varName = " + varName);
+        //System.out.println("Assignment to varName = " + varName);
         String varType = argu.lookupVariableType(varName); 
 
         if (varType == null) {
@@ -853,7 +859,7 @@ public class MyVisitor2 extends GJDepthFirst<String, MyVisitor2.Context> {
     @Override
     public String visit(Identifier n, Context argu) throws Exception {
         String varName = n.f0.toString();
-        System.out.println("Visiting identifier: " + varName);
+        //System.out.println("Visiting identifier: " + varName);
         
         if (symbolTable.containsKey(varName)) {
             return varName;
